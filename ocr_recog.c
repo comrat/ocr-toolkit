@@ -1,435 +1,1066 @@
 #include "ocr_meta.h"
-#include "ocr_segm.h"
-#include "ocr_char_templates.h"
 #include "ocr_recog.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <math.h>
-#include <wchar.h>
+#include <stdio.h>	// FOR DEBUG!!!!!
+/** 3
+ * ocr_recog_stat_lines_area - функция возвращает массив
+ * структур с информацией о текстовой области сстрок из 
+ * фрагмента текста \fItext_area\fP. Число слов передается
+ * через ссылка на переменную \fIline_count\fP. Области
+ * строк опредляются через статистическую оценку доли
+ * черных точек в строке. Данная функция корректно работает
+ * на изображениях с ровным текстом! Наклонный под углом
+ * текст может интерпретироваться неправильно.
+ *
+ * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * Функция возвращает массив структур с информацией о
+ * текстовой области строк.
+ * В случае неудачи функция возвращает \fINULL\fP.
+ */
+ocr_text_area *ocr_recog_stat_lines_area(ocr_text_area *text_area, int *line_count);
+/** 3
+ * ocr_recog_stat_words_area - функция возвращает массив
+ * структур с информацией о текстовой области слов из
+ * текстовой области строки \fIline_area\fP. Число слов
+ * передается через ссылку на переменную \fIchar_count\fP. 
+ * Данная функция корректно работает на изображениях с 
+ * ровным текстом! Наклонный под углом текст может 
+ * интерпретироваться неправильно.
+ *
+ * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * Функция возвращает массив структур с информацией о
+ * текстовой области слов, размерность массива передается
+ * через входную переменную \fIchar_count\fP.
+ * В случае неудачи функция возвращает \fINULL\fP.
+ */
+ocr_text_area *ocr_recog_stat_words_area(ocr_text_area *line_area, int *word_count);
+/** 3
+ * ocr_recog_stat_chars_area - функция возвращает массив
+ * структур с информацией о текстовой области символов.
+ * На вход подается текстовая область слова \fIword_area\fP
+ * и ссылка на переменную \fIchar_count\fPдля хранения там 
+ * числа символов в введенном слове. Данная функция корректно 
+ * работает на изображениях с ровным текстом! Наклонный под 
+ * углом текст может интерпретироваться неправильно.
+ *
+ * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * Функция возвращает массив структур с информацией о
+ * текстовой области, размерность массива передается через
+ * входную переменную \fIchar_count\fP.
+ * В случае неудачи функция возвращает \fINULL\fP.
+ */
+ocr_text_area *ocr_recog_stat_chars_area(ocr_text_area *word_area, int *char_count);
 
-/************************ Прототипы *****************************/
-int ocr_recog_char_hist(ocr_text_area *char_area, wchar_t *res_char);
 
-char ocr_recog_char_corners(ocr_text_area *char_area);
 
-int ocr_recog_char_region(ocr_text_area *char_area, wchar_t *res_char);
 
-int ocr_recog_get_region_stat(ocr_text_area *char_area, double *regions);
+ocr_text_area *ocr_recog_hist_chars_area(ocr_text_area *word_area, int *char_count);
 
-proj_hist *ocr_recog_get_proj_hist(ocr_text_area *text);
 
-void ocr_recog_normalize_hist(proj_hist *hist, int width, int height);
 
-int ocr_recog_punct_signs(ocr_text_area *char_area, wchar_t *result);
-/************************ Реализация ****************************/
-/****************************************
-* Подход с гистограммами.
-*****************************************/
-proj_hist *ocr_recog_get_proj_hist(ocr_text_area *text)
+//ocr_text_area *ocr_recog_con_comp_chars_area(ocr_text_area *word_area, int *char_count);
+
+
+/** 3
+ */
+char ocr_recog_get_zone_char(ocr_text_area *char_area);
+
+/************************ Реализация *******************************/
+
+ocr_text_area *ocr_recog_get_word_area(ocr_text_area *t_area)
 {
-	double *lines = NULL, *colls = NULL;
-	if (text->width <= 0 || text->height <= 0) {
-		printf("Некорректные ширина или высота текстовой области.\n");
-		return NULL;
-	}
-	/* Выделяем память для гистограмм. */
-	proj_hist *hist = (proj_hist *)malloc(sizeof(proj_hist));
-	if (hist == NULL) {
-		printf("Не удалось выделить память для результирующей проекционной гистограммы.\n");
-		return NULL;
-	}
-	/* Получаем гистограмму по строкам. */
-	lines = ocr_segm_get_line_stat(text);
-	if (lines == NULL) {
-		printf("Не удалось получить проективную гистограмму по строкам.\n");
-		return NULL;
-	}
-	/* Получаем гистограмму по столбцам. */
-	colls = ocr_segm_get_coll_stat(text);
-	if (colls == NULL) {
-		printf("Не удалось получить проективную гистограмму по строкам.\n");
-		return NULL;
-	}
-	hist->lines = lines;
-	hist->colls = colls;
-	hist->width = text->width;
-	hist->height = text->height;
-	return hist;
+	return NULL;
 }
 
-/* Интерполяция для шага по х между y1 и y2 = 1. */
-double interpolate(double y1, double y2, double rel_x)
+ocr_text_area *ocr_recog_stat_chars_area(ocr_text_area *word_area, int *char_count)
 {
-	double result = 0.0;
-	if (rel_x < 0 && rel_x > 1) {
-		printf("Неправильное указания относительного положения х в интервале.\n");
-		return -1;
-	}
-	result =  y1 + (y2 - y1) * rel_x;
-	result = (result >= 0) ? result : 0;
-	return result;
-}
+	if(word_area->height <= 0)
+		return NULL;
 
-/* Нормализуем гистограмму, приводим к фиксированной ширине и высоте. */
-void ocr_recog_normalize_hist(proj_hist *hist, int width, int height)
-{
-	int shift = 0;
-	int curr = 0;
-	int mod = 0;
-	int i = 0;
-	double *lines = NULL;
-	double *colls = NULL;
-	double prev_val = 0.0;
+	int width = word_area->width;		// ширина текстовой области
+	int height = word_area->height;		// высота текстовой области
+	int i = 0, j = 0, k = 0, l = 0;		// индексы
+	int shift = (int)(height * 0.05);	// будем считать длину разделителя за 1/20 высоты
+	//int mid_shift = shift >> 1;	// середина шага
+	int char_be = 0, char_end = 0;	// индексы начала и конца символа в слове
+	int char_width = 0;		// ширина символа
+	int start_ind = 0;		// индекс, откуда начинаются символы
+	int char_height = 0;		// высота текущего символа
+	int up_border = 0;		// индекс строки с которой начинается символ
+	double mu = 0.0;		// доля черных пикселей в столбце
+	double mu_height = 0.0;		// доля черных пикселей в строке
+	double thrshld = 0.005;		// пороовое значение доли черных пикселей
+	uchar state = 0;		// переменная указывает на текущее состояние 0 - елси символ,
+					// 255 - если разделитель
+	uchar **pix = word_area->pix;	// 2-мерный массив пикселей текстовой области
+	ocr_text_area *chars = NULL;	// рещультирующий массив текстовых областей символов
+	ocr_text_area add_area;		// добавляемая текстовая область
 
-	/* Если входные ширина и высота соотвествуют шаблонным, 
-	возвращаем исходную. */
-	if (width == TEMP_WIDTH && height == TEMP_HEIGHT) {
-		return;
-	}
-	
-	if (width <= 1 || height <= 1) {
-		printf("Введены некорректные ширина или высота нормализуемой области.\n");
-		return;
-	}
-	/* Выделяем память для выходных данных. */
-	lines = (double *)malloc(sizeof(double) * TEMP_HEIGHT);
-	colls = (double *)malloc(sizeof(double) * TEMP_WIDTH);
-	if (lines == NULL || colls == NULL) {
-		printf("Проблемы при выделении памяти для нормированной области.\n");
-		return;
-	}
-	lines = (double *)memset(lines, 0, TEMP_HEIGHT * sizeof(double));
-	colls = (double *)memset(colls, 0, TEMP_WIDTH * sizeof(double));
+	chars = NULL;
+	(*char_count) = 0;
 
-	/* Если символ шире стандартного. */
-	if (width <= TEMP_WIDTH) {
-		/* Определяем шаг разбиения. */
-		shift = TEMP_WIDTH / width + 1;
-		for (i = 0; i < TEMP_WIDTH - shift; i++) {
-			curr = i / shift;	/* текущий индекс входной гистограммы */
-			mod = i % shift;
-			if (mod == 0) {
-				colls[i] = hist->colls[curr];
-				prev_val = colls[i];
-			} else {
-			//	colls[i] = interpolate(hist->colls[curr], hist->colls[curr + 1], (double)mod / shift);
-				colls[i] = prev_val;//hist->colls[curr - 1];
+	/* Находим начало инжекс, с которого начинаются символы. */
+	for(i = 0; i < width; i++){
+		mu = 0.0;
+		for(j = 0; j < height; j++){
+			mu += pix[j][i];
+		}
+		mu /= CR_BLACK * height;
+		if(mu > thrshld){
+			start_ind = i;
+			break;
+		}
+	}
+	char_be = start_ind;	// запоминаем индекс
+	for(i = start_ind; i < width - shift; i++){
+		/* Вычисляем долю черных пикселей в столбце пикселей. */
+		mu = 0.0;
+		for(j = 0; j < height; j++){
+			for(k = 0; k < shift; k++){
+				mu += pix[j][i + k];
 			}
 		}
-		/* Заполняем оставшийся шаг выходного изображения. */
-		for (i = TEMP_WIDTH - shift; i < TEMP_WIDTH; i++) {
-			mod = i % shift;
-			//colls[i] = interpolate(hist->colls[width - 1], hist->colls[width], (double)mod / shift);
-			colls[i] = hist->colls[width - 1];
-		}
-	} else {
-		/* Если символ не шире стандартного. */
-		/* Определяем шаг разбиения. */
-		shift = width / TEMP_WIDTH;
-		for (i = 0; i < TEMP_WIDTH; i++) {
-			if (i == TEMP_WIDTH - 1)
-				colls[i] = hist->colls[width - 1];
-			else
-				colls[i] = hist->colls[i * shift];
+		mu /= CR_BLACK * height * shift;
+
+		if((mu < thrshld && state == 0) || i == width - shift - 1){	// если переходим в режим разделителя после символа
+			state = 255;		// меняем на режим разделителя
+			char_end = i;//(i + mid_shift < width) ? i + mid_shift: width - 1;	// индекс конца символа
+			char_width = char_end - char_be;	// определяем ширину символа
+			/* Если ширина положительна, то создадим новый символ. */
+			if(char_width > 0){
+				add_area.x = char_be;
+				add_area.y = word_area->y;
+				add_area.width = char_width;
+				char_height = height;
+				up_border = 0;
+				/* Определеям границы символа сверху. */
+				for(k = 0; k < height; k++){
+					mu_height = 0;
+					for(l = char_be; l < char_end; l++){
+						mu_height += pix[k][l];
+					}
+					mu_height /= CR_BLACK * char_width;
+					if(mu_height < thrshld){
+						char_height--;
+						up_border++;
+					}else{
+						break;
+					}
+				}
+				/**/
+				for(k = height - 1; k >= 0; k--){
+					mu_height = 0;
+					for(l = char_be; l < char_end; l++){
+						mu_height += pix[k][l];
+					}
+					mu_height /= CR_BLACK * char_width;
+					if(mu_height < thrshld){
+						char_height--;
+					}else{
+						break;
+					}
+				}
+				add_area.height = char_height;
+				/* Копируем область символа из области слова. */
+				add_area.pix = (uchar **)malloc(sizeof(uchar *) * char_height);
+				for(k = 0; k < char_height; k++){
+					add_area.pix[k] = (uchar *)malloc(sizeof(uchar) * char_width);
+					for(l = 0; l < char_width; l++){
+						add_area.pix[k][l] = pix[k + up_border][l + char_be];
+					}
+				}
+				/* Добавление новой текстовой в массив области. */
+				(*char_count)++;
+				chars = (ocr_text_area *)realloc(chars, sizeof(ocr_text_area) * (*char_count));
+				chars[*char_count - 1] = add_area;
+				char_be = width - 1;	// сбрасываем индекс начала символа
+			}
+		}else if(mu > thrshld && state == 255){
+			state = 0;			// меняем на режим символа
+			//char_be = i - mid_shift;	// запоминаем индекс начала символа
+			char_be = i + shift;
 		}
 	}
-	/* Если символ выше стандартного. */
-	if (height <= TEMP_HEIGHT) {
-		/* Определяем шаг разбиения. */
-		shift = TEMP_HEIGHT / height + 1;
-		for (i = 0; i < TEMP_HEIGHT - shift; i++) {
-			curr = i / shift;	/* текущий индекс входной гистограммы */
-			mod = i % shift;
-			if (mod == 0) {
-				lines[i] = hist->lines[curr];
-				prev_val = lines[i];
-			} else {
-			//	lines[i] = interpolate(hist->lines[curr], hist->lines[curr + 1], (double)mod / shift);
+	return chars;
+}
+
+ocr_text_area *ocr_recog_stat_words_area(ocr_text_area *line_area, int *word_count)
+{
+	if(line_area->height <= 0)
+		return NULL;
+
+	int width = line_area->width;		// ширина текстовой области
+	int height = line_area->height;		// высота текстовой области
+	int i = 0, j = 0, k = 0, l = 0;		// индексы
+	int shift = (int)(height * 0.18);	// будем считать длину разделителя за четверть высоты
+	int mid_shift = shift >> 1;	// середина шага
+	int word_be = 0, word_end = 0;	// индексы начала и конца слова в строке
+	int word_width = 0;		// ширина слова
+	int start_ind = 0;		// индекс, откуда начинаются слова
+	double mu = 0.0;		// доля черных пикселей в столбце
+	double thrshld = 0.0005;		// пороовое значение доли черных пикселей
+	uchar state = 0;		// переменная указывает на текущее состояние 0 - елси слово,
+					// 255 - если разделитель.
+	uchar **pix = line_area->pix;	// 2-мерный массив пикселей текстовой области
+	ocr_text_area *words = NULL;	// рещультирующий массив текстовых областей слов
+	ocr_text_area add_area;		// добавляемая текстовая область
+
+	words = NULL;
+	(*word_count) = 0;
+	/* Находим начало инжекс, с которого начинаются символы. */
+	for(i = 0; i < width; i++){
+		mu = 0.0;
+		for(j = 0; j < height; j++){
+			mu += pix[j][i];
+		}
+		mu /= CR_BLACK * height;
+		if(mu > thrshld){
+			start_ind = i;
+			break;
+		}
+	}
+	word_be = start_ind;	// запоминаем индекс
+	for(i = start_ind; i < width - shift; i++){
+		/* Вычисляем долю черных пикселей в столбце пикселей. */
+		mu = 0.0;
+		for(j = 0; j < height; j++){
+			for(k = 0; k < shift; k++){
+				mu += pix[j][i + k];
+			}
+		}
+		mu /= CR_BLACK * height * shift;
+		if((mu < thrshld && state == 0) || i == width - shift - 1){	// если переходим в режим разделителя после символа
+			state = 255;		// меняем на режим разделителя
+			word_end = (i + mid_shift < width) ? i + mid_shift: width - 1;	// индекс конца символа
+			word_width = word_end - word_be;	// определяем ширину символа
+			/* Если ширина положительна, то создадим новый символ. */
+			if(word_width > 0){
+				add_area.x = word_be;
+				add_area.y = line_area->y;
+				add_area.width = word_width;
+				add_area.height = height;
+				/* Копируем область символа из области слова.. */
+				add_area.pix = (uchar **)malloc(sizeof(uchar *) * height);
+				for(k = 0; k < height; k++){
+					add_area.pix[k] = (uchar *)malloc(sizeof(uchar) * word_width);
+					for(l = 0; l < word_width; l++){
+						add_area.pix[k][l] = pix[k][l + word_be];
+					}
+				}
+				/* Добавление новой текстовой в массив области. */
+				(*word_count)++;
+				words = (ocr_text_area *)realloc(words, sizeof(ocr_text_area) * (*word_count));
+				words[*word_count - 1] = add_area;
+				word_be = width - 1;	// сбрасываем индекс начала символа
+			}
+		}else if(mu > thrshld && state == 255){
+			state = 0;			// меняем на режим символа
+			word_be = i - mid_shift;	// запоминаем индекс начала символа
+		}
+	}
+	return words;
+}
+
+ocr_text_area *ocr_recog_stat_lines_area(ocr_text_area *text_area, int *line_count)
+{
+	if(text_area->width <= 0)
+		return NULL;
+
+	int width = text_area->width;		// ширина текстовой области
+	int height = text_area->height;		// высота текстовой области
+	int i = 0, j = 0, k = 0, l = 0;		// индексы
+	int shift = 1;//(int)(height * 0.25);
+	int mid_shift = shift >> 1;	// середина шага
+	int line_be = 0, line_end = 0;	// индексы начала и конца слова в строке
+	int line_height = 0;		// высота строки
+	int start_ind = 0;		// индекс, откуда начинаются строки
+	int h_curr = 0, h_next = 0;
+	int h_new = 0;
+	int line_size = sizeof(uchar) * width;
+	double mu = 0.0;		// доля черных пикселей в рдной строке
+	double thrshld = 0.0005;	// пороговое значение доли черных пикселей
+	uchar state = 0;		// переменная указывает на текущее состояние 0 - елси строка,
+					// 255 - если отступ.
+	uchar **pix = text_area->pix;	// 2-мерный массив пикселей текстовой области
+	uchar **tmp, **del;
+	ocr_text_area *lines = NULL;	// рещультирующий массив текстовых областей слов
+	ocr_text_area add_area;		// добавляемая текстовая область
+
+	(*line_count) = 0;
+	/* Находим начальный индекс, с которого начинаются строки. */
+	for(i = 0; i < height; i++){
+		mu = 0.0;
+		for(j = 0; j < width; j++){
+			mu += pix[i][j];
+		}
+		mu /= CR_BLACK * width;
+		if(mu > thrshld){
+			start_ind = i;
+			break;
+		}
+	}
+	line_be = start_ind;	// запоминаем индекс
+	for(i = start_ind; i < height - shift; i++){
+		/* Вычисляем долю черных пикселей в столбце пикселей. */
+		mu = 0.0;
+		for(j = 0; j < width; j++){
+			for(k = 0; k < shift; k++){
+				mu += pix[i + k][j];
+			}
+		}
+		mu /= CR_BLACK * width * shift;
+		if((mu < thrshld && state == 0) || i == height - shift - 1){	// если переходим в режим разделителя после символа
+			state = 255;		// меняем на режим разделителя
+			line_end = (i + mid_shift < height) ? i + mid_shift : height - 1;	// индекс конца символа
+			line_height = line_end - line_be;	// определяем высоту строки
+			/* Если ширина положительна, то создадим новую строку. */
+			if(line_height > 0){
+				add_area.y = line_be;
+				add_area.x = text_area->x;
+				add_area.height = line_height;
+				add_area.width = width;
+				/* Копируем область строки из текстовой области. */
+				add_area.pix = (uchar **)malloc(sizeof(uchar *) * height);
+				for(k = 0; k < line_height; k++){
+					add_area.pix[k] = (uchar *)malloc(sizeof(uchar) * width);
+					for(l = 0; l < width; l++){
+						add_area.pix[k][l] = pix[k + line_be][l];
+					}
+				}
+				/* Добавление новую текстовую область в массив области. */
+				(*line_count)++;
+				lines = (ocr_text_area *)realloc(lines, sizeof(ocr_text_area) * (*line_count));
+				/* Добавляем новый элемент в массив. */
+				lines[*line_count - 1] = add_area;
+				line_be = height - 1;	// сбрасываем индекс начала символа
+			}
+		}else if(mu > thrshld && state == 255){
+			state = 0;			// меняем на режим символа
+			line_be = i - mid_shift;	// запоминаем индекс начала символа
+		}
+	}
+
+	/* Проссмтриваем все строки на наличие ошибочно распознанных
+	"межстрочных" строк. */
+	for(i = 0; i < (*line_count) - 1; i++){
+		h_curr = lines[i].height;
+		h_next = lines[i + 1].height;
+		if((double)h_next / h_curr >= 3){
+			h_new = h_curr + h_next;
+			/* Объединяем 2 строки в одну. */
+			lines[i + 1].y = lines[i].y;
+			lines[i + 1].height = h_new;
+			/* Выжедяем новый 2-мерный массив для пикселей области. */
+			tmp = (uchar **)malloc(sizeof(uchar *) * h_new);
+			for(j = 0; j < h_new; j++)
+				tmp[j] = (uchar *)malloc(line_size);
+			/* Копируем строки из текущей области. */
+			for(j = 0; j < h_curr; j++){
+				tmp[j] = (uchar *)memcpy(tmp[j], lines[i].pix[j], line_size);
+			}
+			/* Копируем строки из следущей области. */
+			for(j = h_curr; j < h_new; j++){
+				tmp[j] = (uchar *)memcpy(tmp[j], lines[i + 1].pix[j - h_curr], line_size);
+			}
+			/* Удаляем уже 2-мерные массивы из скопированнх областей. */
+			del = lines[i + 1].pix;
+			lines[i + 1].pix = tmp;
+			free(del);
+			free(lines[i].pix);
+			for(j = i; j < *line_count - 1; j++){ 
+				memcpy(&lines[j], &lines[j + 1], sizeof(ocr_text_area));
+			}
+			(*line_count)--;
+			lines = (ocr_text_area *)realloc(lines, sizeof(ocr_text_area) * (*line_count));
+		}
+	}
+	return lines;
+}
+/*****************************************************************************/
+
+/*********************                *****************************/
+ocr_text_area *ocr_recog_hist_chars_area(ocr_text_area *word_area, int *char_count)
+{
+	int i = 0, j = 0;
+	int width = word_area->width;
+	int height = word_area->height;
+	uchar **pix = word_area->pix;
+	double *mu = (double *)malloc(sizeof(double) * width);
+	double thrshld = 0.005;
+	ocr_text_area *chars = NULL;
+
+	(*char_count) = 0;
+	for(i = 0; i < width; i++){
+		mu[i] = 0.0;
+		for(j = 0; j < height; j++){
+			mu[i] += pix[j][i];
+		}
+		mu[i] /= CR_BLACK * height;
+	}
+
+	for(i = 0; i < width - 1; i++){
+		if(mu[i + 1] - mu[i] > 0.2)
+			printf("Be:%d\n", i);
+		if(mu[i + 1] - mu[i] < -0.2)
+			printf("End:%d\n", i);
+	}
+
+	return word_area;
+}
+/*****************************************************************************/
+/*
+void con_comp_make_label(ocr_text_area *word_area, int x, int y)
+{
+	
+}
+
+ocr_text_area *ocr_recog_con_comp_chars_area(ocr_text_area *word_area, int *char_count)
+{
+	int i = 0, j = 0;
+	int width = word_area->width;
+	int height = word_area->height;
+	uchar **pix = word_area->pix;
+	ucahr **labeled_pix = (uchar **)malloc(sizeof(uchar *) * width * height);
+	for(i = 0; i < height; i++){
+		labeled[i] = (uchar *)malloc(sizeof(uchar) * width);
+		for(j = 0; j < width; j++){
+			labeled[i][j] = 0;
+		}
+	}
+
+	for(i = 0; i < height; i++){
+		for(j = 0; j < width; j++){
+			if(labeled[i][j] == 0)
 				
-				lines[i] = prev_val;//hist->lines[curr - 1];
-			}
-		}
-		/* Заполняем оставшийся шаг выходного изображения. */
-		for (i = TEMP_HEIGHT - shift; i < TEMP_HEIGHT; i++) {
-			mod = i % shift;
-			lines[i] = hist->lines[height - 1];//interpolate(hist->lines[height - 1], hist->lines[height], (double)mod / shift);
-		}
-	} else {
-		/* Если символ не выше стандартного. */
-		/* Определяем шаг разбиения. */
-		shift = height / TEMP_HEIGHT;
-		for (i = 0; i < TEMP_HEIGHT; i++) {
-			if (i == TEMP_HEIGHT - 1)
-				lines[i] = hist->lines[height - 1];
-			else
-				lines[i] = hist->lines[i * shift];
 		}
 	}
-	/* Ссылаемся на полученные строки и столбцы. */
-	hist->width = TEMP_WIDTH;
-	hist->height = TEMP_HEIGHT;
-	//free(hist->lines);
-	//free(hist->colls);
-	hist->lines = (double *)realloc(hist->lines, sizeof(double) * TEMP_HEIGHT);
-	hist->colls = (double *)realloc(hist->colls, sizeof(double) * TEMP_WIDTH);
-	hist->lines = (double *)memcpy(hist->lines, lines, sizeof(double) * TEMP_HEIGHT);
-	hist->colls = (double *)memcpy(hist->colls, colls, sizeof(double) * TEMP_WIDTH);
+}*/
+
+
+
+/*****************************************************************************/
+
+/*****************************************************************************/
+
+
+/*****************************************************************************/
+const int ZONES_ON_SIDE = 5;		// число зон разбиения на сторону для каждого симола
+#define STAT_SYMB_COUNT 51
+
+typedef struct{
+	double zones[5][5];
+	char symb;
+}zone_stat_char;
+
+const zone_stat_char zones[STAT_SYMB_COUNT] = {
+	{	/* 1) a */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'a'
+	}, {	/* 2) b */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'b'
+	}, {	/* 3) c */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'c'
+	}, {	/* 4) d */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'd'
+	}, {	/* 5) e */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'e'
+	}, {	/* 6) f */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'f'
+	}, {	/* 7) g */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'g'
+	}, {	/* 8) h */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'h'
+	}, {	/* 9) i */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'i'
+	}, {	/* 10) j */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'j'
+	}, {	/* 11) k */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'k'
+	}, {	/* 12) l */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'l'
+	}, {	/* 13) m */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'm'
+	}, {	/* 14) n */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'n'
+	}, {	/* 15) o */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'o'
+	}, {	/* 16) p */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'p'
+	}, {	/* 17) q */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'q'
+	}, {	/* 18) r */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'r'
+	}, {	/* 19) s */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		's'
+	}, {	/* 20) t */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		't'
+	}, {	/* 21) u */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'u'
+	}, {	/* 22) v */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'v'
+	}, {	/* 23) w */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'w'
+	}, {	/* 24) x */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'x'
+	}, {	/* 25) y */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'y'
+	}, {	/* 26) z */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'z'
+	}, {	/* 27) A */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'A'
+	/* 'C' - совпадает с маленькой 'c'. */
+	}, {	/* 28) B */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'B'
+	}, {	/* 29) D */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'D'
+	}, {	/* 30) E */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'E'
+	}, {	/* 31) F */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'F'
+	}, {	/* 32) G */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'G'
+	}, {	/* 33) H */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'H'
+	}, {	/* 34) I */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'I'
+	}, {	/* 35) J */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'J'
+	}, {	/* 36) K */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'f'
+	}, {	/* 37) L */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'L'
+	}, {	/* 38) M */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'M'
+	}, {	/* 39) N */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'N'
+	}, {	/* 40) O */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'O'
+	}, {	/* 41) P */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'P'
+	}, {	/* 42) Q */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'Q'
+	}, {	/* 43) R */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'R'
+	}, {	/* 44) S */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'S'
+	}, {	/* 45) T */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'T'
+	}, {	/* 46) U */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'U'
+	}, {	/* 47) V */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'q'
+	}, {	/* 48) W */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'W'
+	}, {	/* 49) X */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		's'
+	}, {	/* 50) Y */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'Y'
+	}, {	/* 51) Z */
+		{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'Z'
+	/* Русский алфавит. */
+	/* 'a' аналогично англискому 'a'. */
+	},// {	/* 52) б */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		208
+	 'в' аналогично английскому 'в'. */
+	//}, {	/* 53) г */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'г'
+	*///}, {	/* 54) д */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'д'
+	*//* 'е' аналогична английской 'е'. */
+	//}, {	/* 55) ё */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ё'
+	*///}, {	/* 56) ж */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ж'
+	*///}, {	/* 57) з */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'з'
+	*///}, {	/* 58) и */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'и'
+	*///}, {	/* 59) й */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'й'
+	*///}, {	/* 60) к */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'к'
+	*///}, {	/* 61) л */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'л'
+	*///}, {	/* 62) м */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'м'
+	*///}, {	/* 63) н */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'н'
+	*//* 'о' аналогична 'о'. */
+	//}, {	/* 64) п */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'п'
+	*///}, {	/* 65) р */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'р'
+	*//* 'c' аналогична английской 'c'. */
+	/* 'т' аналогична английской 'Т'. */
+	//}, {	/* 66) у */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'у'
+	*///}, {	/* 67) ф */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ф'
+	*//* 'x' аналогична английской 'x'. */
+	//}, {	/* 68) ц */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ц'
+	*///}, {	/* 69) ч */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ч'
+	*///}, {	/* 70) ш */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ш'
+	*///}, {	/* 71) щ */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'щ'
+	*///}, {	/* 72) ъ */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ъ'
+	*///}, {	/* 73) ы */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ы'
+	*///}, {	/* 74) ь */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ь'
+	*///}, {	/* 75) э */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'э'
+	*///}, {	/* 76) ю */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'ю'
+	*///}, {	/* 77) я */
+	/*	{{0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0},
+		 {0, 0, 0, 0, 0}},
+		'я'
+	}*/
+	/* Прочие символы. */
+};
+
+char ocr_recog_get_simillar_char(double *zone)
+{
+	//int i = 0, j = 0;
+	char result_char = 0;
+	//for(i = 0; i < ZONES_ON_SIDE; i++)
+	return result_char;
 }
 
-/* Нахождение расстояния до шаблона по методу гистограмм. */
-double ocr_recog_get_dist_hist(proj_hist *hist, temp_hist *template)
+char ocr_recog_get_zone_char(ocr_text_area *char_area)
 {
-	int i = 0;
-	double result = 0.0;
+	char result = '.';
+	int zone_size = 5;
+	int i = 0, j = 0;
+	int block_x = 0, block_y = 0;
+	int width = char_area->width;
+	int height = char_area->height;
+	int block_width = 0;
+	int block_height = 0;
+	int zone_count = 0;
+	double part = 0.0;
+	uchar **pix = char_area->pix;
+	/* Инициализируем 2-мерный массив зон. */
+	double **zone = (double **)malloc(sizeof(double *) * zone_size);
 
-	for (i = 0; i < TEMP_WIDTH; i++)
-		result += (hist->colls[i] - template->colls[i]) * (hist->colls[i] - template->colls[i]);
-
-	for (i = 0; i < TEMP_HEIGHT; i++)
-		result += (hist->lines[i] - template->lines[i]) *(hist->lines[i] - template->lines[i]) ;
-	return result;
-}
-
-int ocr_recog_char_hist(ocr_text_area *char_area, wchar_t *res_char)
-{
-	int i = 0;
-	int min_ind = 0;
-	double min = 0;
-	double tmp = 0;
-	proj_hist *hist = NULL;
-	/* Если какой-либо из размеров области значительно меньше (в 10 раза) щаблонной,
-	то не рассматриваем. */
-	if ((char_area->width < TEMP_WIDTH / 10) || (char_area->height < TEMP_HEIGHT / 10))
-		return -1;
-
-	/* Получаем гистограммы по обоим измерениям. */
-	hist = ocr_recog_get_proj_hist(char_area);
-	if (hist == NULL) {
-		printf("не удалось получить гистограммы для распознания.\n");
-		return -1;
-	}
-	/* Нормализуем полученные результаты. */
-	ocr_recog_normalize_hist(hist, char_area->width, char_area->height);
-	if (hist == NULL) {
-		printf("Не удалось получить гистограммы символа.\n");
-		return -1;
-	}
-	/* За мин. возьмем максимально возможное значение. */
-	min = TEMP_HEIGHT * TEMP_WIDTH;
-	/* Сравниваем с базой шаблонов и находим 
-	ближайщий. */
-	for (i = 0; i < HIST_TEMP_COUNT; i++) {
-		tmp = ocr_recog_get_dist_hist(hist, &temp_for_hist[i]);
-	//	printf("%lc", temp_for_hist[i].symbol);
-		if (tmp < min) {	
-			min_ind = i;
-			min = tmp;
-		}
-	}
-/*
-	char str[4];		
-	printf("\t\t{");
-	for (i = 0; i < hist->width - 1; i++) {
-		sprintf(str, "%.2f", hist->colls[i]);
-		str[1] = '.';
-		printf("%s, ", str);
-		if ((i + 1) % 10 == 0)
-			printf("\n\t\t ");
-	}
-	sprintf(str, "%.2f", hist->colls[hist->width - 1]);
-	str[1] = '.';
-	printf("%s},\n\t\t{", str);
-
-	for (i = 0; i < hist->height - 1; i++) {	
-		sprintf(str, "%.2f", hist->lines[i]);
-		str[1] = '.';
-		printf("%s, ", str);
-		if ((i + 1) % 10 == 0)
-			printf("\n\t\t ");
-	}
-	sprintf(str, "%.2f", hist->lines[hist->height - 1]);
-	str[1] = '.';
-	printf("%s},\n\n\n", str);		
-*/
-
-
-
-
-	
-	*res_char = temp_for_hist[min_ind].symbol;
-//	printf("%lc", res_char);
-	return 0;
-}
-
-/************************************
-* Статистический подход.
-*************************************/
-/* Нахождение расстояния до шаблона по методу гистограмм. */
-double ocr_recog_get_dist_stat(double *stat, temp_stat *template)
-{
-	int i = 0;
-	double result = 0.0;
-
-	for (i = 0; i < TEMP_CELLS_COUNT; i++)
-		result += sqrt((stat[i] - template->stat[i]) * (stat[i] - template->stat[i]));
-
-	return result;
-}
-
-int ocr_recog_get_region_stat(ocr_text_area *char_area, double *regions)
-{
-	if (regions == NULL) {
-		printf("Не удалось получить данные о региональной статистике.\n");
-		return -1;
-	}
-	int i = 0, j = 0;		/* Индексы для текстовой области. */
-	int cell_x = 0, cell_y = 0;	/* Индексы для клеток. */
-	int width = char_area->width;	/* Ширина текстовой области.*/
-	int height = char_area->height;	/* Высота текстовой области. */
-	int cells_count = 0;		/* Общее число клеток. */
-	int cell_w = 0;			/* Ширина клетки на текстовой области. */
-	int cell_h = 0;			/* Высота клетки на текстовой области. */
-	int rest_cell_w = 0;		/* Ширина клетки на текстовой области. */
-	int rest_cell_h = 0;		/* Высота клетки на текстовой области. */
-	int pix_count = 0;		/* Число пикслей в одной клетке текстовой области. */
-	int rest_pix_count = 0;		/* Число пикслей в клетке в конце строки. */
-	int ind = 0;			/* Индекс. */
-	uchar *pix = char_area->pix;	/* Указатель на пиксели текстовой области. */	
-	/* Число клеток. */
-	cells_count = TEMP_X_CELLS * TEMP_Y_CELLS;
-	/* Ширина и высота клетки. */
-	cell_w = width / TEMP_X_CELLS;
-	cell_h = height / TEMP_Y_CELLS;
-	/* Ширина последней в строке клекти. */
-	rest_cell_w = (width % TEMP_X_CELLS == 0) ? cell_w : cell_w + (TEMP_X_CELLS - width % cell_w);
-	/* Высота последней в столбце клекти. */
-	rest_cell_h = (height % TEMP_Y_CELLS == 0) ? cell_h : cell_h + (TEMP_Y_CELLS - height % cell_h);
-	/* Сбрасываем все значений клеток. */
-	memset(regions, 0.0, cells_count);
-	for (i = 0; i < cells_count; i++) {
-		regions[i] = 0.0;
-	}
-	/* Число пикселей в клетке. */
-	pix_count = cell_w * cell_h;
-	/* Считаем сумму пикселей для всех клеток. */
-	for (i = 0; i < height; i++) {
-		for (j = 0; j < width; j++) {
-			cell_y = (i / cell_h < TEMP_Y_CELLS) ? i / cell_h : TEMP_Y_CELLS - 1;
-			cell_x = (j / cell_w < TEMP_X_CELLS) ? j / cell_w : TEMP_X_CELLS - 1;
-			regions[cell_y * TEMP_X_CELLS + cell_x] += pix[i * width + j];
-		}
-	}
-
-	/* Число пикселей в конце строки. */
-	rest_pix_count = rest_cell_w * cell_h;
-	/* Нормируем все клетки. */
-	for (i = 0; i < TEMP_Y_CELLS - 1; i++) {
-		for (j = 0; j < TEMP_X_CELLS - 1; j++) {
-			regions[i * TEMP_X_CELLS + j] /= pix_count * CR_BLACK;
-		}
-		/* Индекс последней в строке области. */
-		ind = i * TEMP_X_CELLS + TEMP_X_CELLS - 1;
-		regions[ind] /= rest_pix_count * CR_BLACK;
-	}
-	rest_pix_count = rest_cell_h * cell_w;
-	for (i = 0; i < TEMP_X_CELLS - 1; i++) {
-		ind = cells_count - TEMP_X_CELLS + i;
-		regions[ind] /= rest_pix_count * CR_BLACK;
-	}
-	/* Число пикселей в последней области. */
-	rest_pix_count = rest_cell_w * rest_cell_h;
-	regions[cells_count - 1] /= rest_pix_count * CR_BLACK;
-	return 0;
-}
-
-int ocr_recog_punct_signs(ocr_text_area *char_area, wchar_t *res_char)
-{
-	if (char_area->width <= 0 || char_area->height <= 0)
-		return -1;
-	int i = 0;
-	int width = char_area->width;		/* Ширина симола. */
-	int height = char_area->height;		/* Высота симола. */
-	int cells_count = width * height;	/* Число пикселей. */
-	double rel = 0.0;			/* Отнощение сторон. */
-	double mu = 0.0;			/* Доля черных пикселей. */
-	uchar *pix = char_area->pix;		/* Указатель на пиксели. */
-	/* Считаем долю черных пикселей. */
-	for (i = 0; i < cells_count; i++) {
-		mu += pix[i];
-	}
-	mu /= cells_count * CR_BLACK;
-	*res_char = 0;
-	/* Вычисляем отнощение сторон. */
-	rel = (double)height / width;
-	if (mu > 0.85 && rel >= 0.85 && rel <= 1.15) 
-		*res_char = L'.';
-	else if (mu > 0.8 && rel >= 7 && rel < 0.85)
-		*res_char = L',';
-	else if (mu > 0.8 && rel <= 0.3)
-		*res_char = L'-';
-	/* Если символ не был распознан - выведем ошибку. */
-	if (*res_char == 0)
-		return -1;
+	/* Определяем ширину блока. */
+	if(width % zone_size == 0)
+		block_width = (int)((double)width / zone_size);
 	else
-		return 0;
-}
+		block_width = (int)((double)(width + zone_size - width % zone_size) / zone_size);
+	/* Определяем высоту блока. */
+	if(height % zone_size == 0)
+		block_height = (int)((double)height / zone_size);
+	else
+		block_height = (int)((double)(height + zone_size - height % zone_size) / zone_size);
+	/* Определяем число пикселей вблоке. */
+	zone_count = block_width * block_height;
 
-int ocr_recog_char_region(ocr_text_area *char_area, wchar_t *res_char)
-{
-	int i = 0;
-	int min_ind = 0;
-	int op_res = 0;
-	int cells_count = TEMP_X_CELLS * TEMP_Y_CELLS;
-	double *regions = (double *)malloc(sizeof(double) * cells_count);
-	double min = TEMP_CELLS_COUNT;
-	double tmp = 0;
-
-	if (regions == NULL) {
-		printf("Не удалось выделить память для региональной статистики.\n");
-		return -1;
-	}
-
-	/* Если ширина или высота символа меньше числа разбиений. */
-	if (char_area->width < TEMP_X_CELLS || char_area->height < TEMP_Y_CELLS) {
-		
-		op_res = ocr_recog_punct_signs(char_area, res_char);
-		if (op_res == -1)
-			return -1;
-		else
-			return 0;
-	}
-	
-	/* Получаем статистику по регионам. */
-	op_res = ocr_recog_get_region_stat(char_area, regions);
-	if (op_res != 0)
-		return -1;
-	/* Сравниваем с шаблонами. */
-	for (i = 0; i < STAT_TEMP_COUNT; i++) {
-		tmp = ocr_recog_get_dist_stat(regions, &temp_for_stat[i]);
-		if (tmp < min) {
-			min_ind = i;
-			min = tmp;
+	for(i = 0; i < zone_size; i++){
+		zone[i] = (double *)malloc(sizeof(double) * zone_size);
+		for(j = 0; j < zone_size; j++){
+			zone[i][j] = 0.0;
 		}
 	}
-/*
-	char str[4];
-	printf("\t}, {\n");
-	printf("\t\t {");
-	for (i = 0; i < cells_count - 1; i++) {
-		sprintf(str, "%.2f", regions[i]);
-		str[1] = '.';
-		printf("%s, ", str);
-		if ((i + 1) % 10 == 0)
-			printf("\n\t\t ");
+	/* Вычисляем число черных пикселей в области. */
+	for(i = 0; i < height; i++){
+		for(j = 0; j < width; j++){
+			zone[i / block_height][j / block_width] += pix[i][j];
+		}
 	}
-			
-	sprintf(str, "%.2f", regions[cells_count - 1]);
-	str[1] = '.';
-	printf("%s},\n", str);
-	printf("\t\t L''\n");
-	*/
-	*res_char = temp_for_stat[min_ind].symbol;
-	free(regions);
-	return 0;
+	/* Нормируем. */
+	for(i = 0; i < zone_size; i++){
+		for(j = 0; j < zone_size; j++){
+			zone[i][j] /= zone_count * CR_BLACK;
+			printf("Z:%.2f\n", zone[i][j]);
+		}
+	}
+//printf("cHras %d\n", chars_zone_stat.zone_stat[0][0]);
 }

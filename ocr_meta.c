@@ -3,7 +3,7 @@
 
 
 /************************ Прототипы *****************************/
-ocr_img_info *ocr_img_info_malloc(int width, int height, char pix_type);
+ocr_img_info *ocr_img_info_malloc(int width, int height, char type);
 
 void ocr_img_info_free(ocr_img_info *img);
 
@@ -12,7 +12,7 @@ ocr_text_area *ocr_text_area_malloc(int width, int height, int x, int y);
 void ocr_text_area_array_free(ocr_text_area **area, int elem_count);
 
 /************************ Реализация ****************************/
-ocr_img_info *ocr_img_info_malloc(int width, int height, char pix_type)
+ocr_img_info *ocr_img_info_malloc(int width, int height, char type)
 {
 	int size = 0;
 	int pix_size = 0;
@@ -21,13 +21,13 @@ ocr_img_info *ocr_img_info_malloc(int width, int height, char pix_type)
 	ocr_img_info *result = NULL;
 
 	if (width <= 0 || height <= 0) {
-		
+
 		return NULL;
 	}
 
 	/* определяем размер пикселя, по
 	умолчанию 1байт (для серого). */
-	switch(pix_type){
+	switch(type){
 	case BIN:
 		pix_size = GREY;	/* Для хранения бинаризованного тоже нужен 1 байт. */
 	case RGB:
@@ -59,7 +59,7 @@ ocr_img_info *ocr_img_info_malloc(int width, int height, char pix_type)
 	result->width = width;
 	result->height = height;
 	result->stride = stride;
-	result->bytes_for_pix = pix_type;
+	result->bytes_for_pix = type;
 
 	return result;
 }
@@ -90,7 +90,7 @@ ocr_text_area *ocr_text_area_malloc(int width, int height, int x, int y)
 	int stride = 0;
 	ocr_text_area *result = NULL;
 
-	if (width <= 0 || height <= 0) {	
+	if (width <= 0 || height <= 0) {
 		return NULL;
 	}
 
