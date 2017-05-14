@@ -1,4 +1,6 @@
 *.o
+*.d
 *.swn
 *.swp
 *.swo
+libocrtoolkit.*.so
