@@ -1,19 +1,22 @@
 CC = gcc
-CFLAGS =  -Wall -O0 -g `pkg-config --cflags gtk+-x11-2.0`
-CFLAGS += -I/usr/include/gdk-pixbuf-1.0
-CFLAGS += -g
-CFLAGS += ocr_imgproc.o
-CFLAGS += ocr_segm.o
-CFLAGS += ocr_recog.o
-#TARGET = scan2pdf
-#OBJECTS = scan2pdf.o
-LDFLAGS = `pkg-config --libs gtk+-x11-2.0`
-LDFLAGS += -lm
+CFLAGS = -fPIC -Wall -Wextra -O2 -g
+LDFLAGS = -shared
+RM = rm -f
+TARGET_LIB = libocrtoolkit.0.9.9.so
+SRCS = ocr_meta.c ocr_correct.c ocr_imgproc.c ocr_recog.c ocr_segm.c
+OBJS = $(SRCS:.c=.o)
 
-all: scan2pdf
+.PHONY: all
+	all: ${TARGET_LIB}
 
-scan2pdf: scan2pdf.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+$(TARGET_LIB): $(OBJS)
+		$(CC) ${LDFLAGS} -o $@ $^
 
+$(SRCS:.c=.d):%.d:%.c
+		$(CC) $(CFLAGS) -MM $< >$@
+
+include $(SRCS:.c=.d)
+
+.PHONY: clean
 clean:
-	rm -rf *~*.o img_preproc
+	-${RM} ${TARGET_LIB} ${OBJS} $(SRCS:.c=.d)
