@@ -741,136 +741,6 @@ void ocr_segm_classify_comp(ocr_con_comp *comp, ocr_img_info *img, ocr_cells_net
 	colls_sigma /= colls_stat->count;
 	colls_sigma = sqrt(colls_sigma - colls_mu * colls_mu);
 	printf("%.2f Mu%.2f\n", colls_sigma, colls_mu);
-	if(colls_sigma > 8){
-		//comp->type = PICTURE;
-		//return;
-	}
-	/******* Проверка: рисунок. *******/
-
-	/******* Проверка: текст. *******/
-	/* Компоненты c толщиной не больше 1. */
-	/*if(colls_stat->count <= 1 || lines_stat->count <= 1)
-		return;
-
-
-	for(j = 0; j < lines_stat->count; j++){
-		printf("FF:%.2f ",lines_stat->portion[i]);
-	*/	/* Находим области возрастания и убывания. */
-	/*	if(lines_stat->portion[j] > 0.1){
-			above_value++;
-			if(below_value != 0){
-				intervals_count++;
-				intervals = (ocr_hist_interval *)realloc(intervals, sizeof(ocr_hist_interval) * intervals_count);
-				intervals[intervals_count - 1].count = below_value;
-				intervals[intervals_count - 1].position = 0;
-				//printf("%d: %d\n", 0, below_value);
-			}
-			below_value = 0;
-		}else{
-			below_value++;
-			if(above_value != 0){
-				intervals_count++;
-				intervals = (ocr_hist_interval *)realloc(intervals, sizeof(ocr_hist_interval) * intervals_count);
-				intervals[intervals_count - 1].count = above_value;
-				intervals[intervals_count - 1].position = 255;
-				//printf("%d: %d\n", 1, above_value);
-			}
-			above_value = 0;
-		}
-	}
-
-	if(intervals_count == 0){
-		//printf("000\n");
-		return;
-	}
-
-	tmp = intervals[0].count;
-	above_value = 0;
-	period_count = 0;
-	int portion = 0;
-	for(i = 1; i < intervals_count; i++){
-		if(intervals[i].position == 255){
-			tmp = sqrt((tmp - intervals[i].count) * (tmp - intervals[i].count));
-		//printf("PPP;%d %.2f\n", intervals[i].count, tmp);
-			if(tmp < 8){
-				above_mu += intervals[i].count;
-				above_value++;
-				portion++;
-			}else{
-				if(above_value != 0)
-					above_mu /= above_value;
-				//printf("%.2f\n", above_mu);
-				if(above_value < 3)
-					period_count += above_value;
-				above_value = 0;
-				above_mu = 0;
-			}
-			tmp = intervals[i].count;
-		}
-	}
-
-*/	/* Если нет периодов. */
-/*	if(period_count == 0)
-		return;
-*/
-/*	if(period_count == 1){
-
-	}
-*/
-
-/*	if(comp->width / comp->height < 2)
-		return;
-
-
-*/	/* Анализируем статистически */
-/*	for(i = 0; i < colls_stat->count; i++){
-		colls_mu += colls_stat->portion[i];
-		colls_sigma += colls_stat->portion[i] * colls_stat->portion[i];
-	}
-	colls_mu /= colls_stat->count;
-*/	/* Вычисляем сигму. */
-/*	colls_sigma /= colls_stat->count;
-	colls_sigma = sqrt(colls_sigma - colls_mu * colls_mu);
-
-	for(i = 0; i < lines_stat->count; i++){
-		lines_mu += lines_stat->portion[i];
-		lines_sigma += lines_stat->portion[i] * lines_stat->portion[i];
-	}
-	lines_mu /= lines_stat->count;
-	lines_sigma /= lines_stat->count;
-	lines_sigma = sqrt(lines_sigma - lines_mu * lines_mu);
-
-	//printf("Sigma:%.2f %.2f %.2f\n", sigma, colls_sigma, lines_sigma);
-	if(lines_sigma < 0.7 && colls_sigma > 0.1 && colls_sigma < 0.7)
-		comp->type = TEXT;
-//printf("Sigma:%.2f Period:%d\n", colls_sigma, period_count);
-*/	/*if((period_count > 1) && (colls_sigma < 0.08)){
-		comp->type = TEXT;
-	}*/
-	//	period_count += above_value;
-
-	//printf("period:%d\n", period_count);
-
-
-/*
-	if(((double)portion / intervals_count > 0.3)*///){
-//		comp->type = TEXT;
-//		return;
-//	}
-
-	/*tmp = colls_stat->portion[0];
-	for(i = 0; i < colls_stat->count; i++){
-		tmp = sqrt((tmp - colls_stat->portion[i]) * (tmp - colls_stat->portion[i]));
-		printf("%.2f ", tmp);
-		tmp = colls_stat->portion[i];
-	}*/
-/*
-	free(lines_stat);
-	free(colls_stat);
-	free(intervals);
-*/	/* Проверка: формула. */
-
-	/* Проверка: шум. */
 }
 
 int ocr_segm_get_page_count(ocr_img_info *img)
@@ -915,25 +785,6 @@ ocr_con_comp *ocr_segm_get_comp_by_net(ocr_img_info *grey, ocr_img_info *bin, in
 	/* Определяем основные характеристики (высота, ширина и т.п.) компонент. */
 	ocr_segm_analyze_comp(components, comp_count);
 
-	/* Вычисляем статистику по строкам и столбцам. */
-	/*printf("CCC: %d\n", comp_count);
-	for(i = 0; i < comp_count; i++){
-		ocr_segm_classify_comp(&components[i], img, net, comp_count, cell_width);
-		if(components[i].type == PICTURE)
-			printf("PIC:%d;\n", i + 1);
-		printf("============%d============\n", i + 1);
-	}
-
-	for(i = 0; i < net->height; i++){
-		for(j = 0; j < net->width; j++){
-			if(labeled[i][j] != 0 && components[labeled[i][j] - 1].type == PICTURE)
-				printf("%d|", labeled[i][j] % 10);
-			else
-		 		printf("_|");
-		}
-		printf("\n");
-	}*/
-
 	int curr = 0;
 	int k = 0;
 	int l = 0;
@@ -947,15 +798,8 @@ ocr_con_comp *ocr_segm_get_comp_by_net(ocr_img_info *grey, ocr_img_info *bin, in
 				continue;
 			if(labeled[k][l] == 0);
 				continue;
-			//if((labeled[k][l] != 0) /*&& (components[labeled[k][l] - 1].type == TEXT)*/)
-			//	img->pix[curr] = CR_BLACK;
-			//else
-			//	img->pix[curr] = CR_WHITE;
 		}
 	}
-
-
-
 
 	/* Сетка больше не нужна. */
 	free(net->net);
@@ -1076,10 +920,7 @@ ocr_con_comp *ocr_segm_rlsa(ocr_img_info *grey, ocr_img_info *bin, int vert_shif
 	bin->pix = pix;
 
 	/* Уборка мусора. */
-	//free(pix);
-	//free(vert->pix);
 	free(vert);
-	//free(horizont->pix);
 	free(horizont);
 
 
@@ -1195,5 +1036,3 @@ ocr_cells_net *ocr_segm_and_classification(ocr_img_info *grey, int cells_count, 
 
 	return result;
 }
-
-
