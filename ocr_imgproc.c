@@ -1,110 +1,9 @@
 #include "ocr_meta.h"
-#include "ocr_imgproc.h"
+#include "ocr_preproc.h"
+
 #include <stdlib.h>
 #include <math.h>
-/** 3
- * ocr_preproc_color2grey - преобразование в
- * серое одноканальное изображение.
- * Указатель на структуру \fIimg\fP 
- * входного цветного изображения.
- *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает указатель на структуру с информацией о
- * преобразованном изобравжении.
- */
-ocr_img_info *ocr_imgproc_color2grey(ocr_img_info *img);
-/** 3
- * ocr_preproc_dilate - морфологическое "утолщение"
- * изображения (см. Гонсалес. Вудс "Цифровая обработка 
- * изображений", М. - 2005).
- * Указатель на структуру \fIimg\fP 
- * входного бинаризованного изображения. 
- *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает указатель на структуру с информацией об
- * обработанном изобравжении.
- */
-void ocr_imgproc_dilate(ocr_img_info *img);
-/** 3
- * ocr_preproc_errosion - морфологическое "утоньшение"
- * изображения (см. Гонсалес. Вудс "Цифровая обработка 
- * изображений", М. - 2005).
- * Указатель на структуру \fIimg\fP 
- * входного бинаризованного изображения. 
- *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция не возвращает значений.
- */
-void ocr_imgproc_errosion(ocr_img_info *img);
-/** 3
- * ocr_preproc_sobel - применение филтра Собеля
- * для входного изображения.
- * Указатель на структуру \fIimg\fP 
- * входного серого изображения. 
- * Данный фильтр выделяет границы на изображении.
- *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция не возвращает значений.
- */
-void ocr_imgproc_filter_sobel(ocr_img_info *img);
-/** 3
- * ocr_preproc_sobel - применение филтра Гаусса
- * для входного изображения.
- * Указатель на структуру \fIimg\fP 
- * входного серого изображения.
- * Данный фильтр "сглажывает" изображение.
- * 
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция не возвращает значений.
- */
-void ocr_imgproc_filter_gauss(ocr_img_info *img);
 
-/** 3
- * медианный фильтр.
- */
-void ocr_imgproc_filter_median(ocr_img_info *img, int size);
-
-/** 3
- * ocr_preproc_threshold_otsu - адаптивное пороговое преобразование
- * по алгоритму Отсу для каждой квадратной области.
- * Указатель на структуру \fIimg\fP 
- * входного серого изображения.
- * Серое изображение по ширине разбиваеися на \fIdivisions\fP.
- * высота разбивается на квадраты с высотой соответствующей,
- * полученной ширине при разбиении по ширине.
- * Для каждой квалратной области применяется порог по
- * алгоритму Отсу, который состоит в разбиении точек области
- * на два класса (темные, светлые) и отделить их друг от 
- * друга порогом.
- *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция не возвращает значений.
- */
-ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions);
-/** 3
- * ocr_preproc_threshold_sauvolas - адаптивное пороговое преобразование
- * по алгоритму Саувола для каждой квадратной области.
- * Указатель на структуру \fIocr_img_info\fP 
- * входного серого изображения.
- * Серое изображение по ширине разбиваеися на \fIdivisions\fP.
- * высота разбивается на квадраты с высотой соответствующей,
- * полученной ширине при разбиении по ширине.
- * Для каждой квалратной области применяется порог по
- * алгоритму Саувола, который состоит в вычислении порога
- * через математическое ожидание.
- *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает указатель на структуру с информацией о
- * бинаризованном изобравжении \fBstruct ocr_img_info\fP.
- */
-ocr_img_info *ocr_imgproc_threshold_sauvolas(ocr_img_info *img, int divisions);
-
-void ocr_imgproc_invert(ocr_img_info *img);
-
-/*************************** Реализация *************************/
-
-/* Макрос для порогового преобразования. */
-#define THRESHOLD(x, trshld) (x <= trshld) ? CR_WHITE : CR_BLACK;
 
 /* Функция преобразования цветного пикселя в серый. */
 int rgb2grey(int r, int g, int b)
@@ -112,7 +11,7 @@ int rgb2grey(int r, int g, int b)
 	return (int)((66 * r + 129 * g + 25 * b + 128) >> 8) + 16;
 }
 
-ocr_img_info *ocr_imgproc_color2grey(ocr_img_info *img)
+ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img)
 {
 	/* Если входное изображение не цветное, выходим из функции.*/
 	if(img->bytes_for_pix < 3)
@@ -144,7 +43,7 @@ ocr_img_info *ocr_imgproc_color2grey(ocr_img_info *img)
 }
 
 /* Дилатация изображения. */
-void ocr_imgproc_dilate(ocr_img_info *img)
+void ocr_preproc_dilate(ocr_img_info *img)
 {
 	/* Если изображение не бинаризованное, прерываем. */
 	if(img->bytes_for_pix != 1)
@@ -181,7 +80,7 @@ void ocr_imgproc_dilate(ocr_img_info *img)
 	img->pix = out_img;
 }
 
-void ocr_imgproc_errosion(ocr_img_info *img){
+void ocr_preproc_errosion(ocr_img_info *img){
 	/* Если изображение не бинаризованное, прерываем. */
 	if(img->bytes_for_pix != 1)
 		return;
@@ -212,9 +111,9 @@ void ocr_imgproc_errosion(ocr_img_info *img){
 	free(pix);
 }
 
-ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions)
+ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 {
-	/* Если входное изображение не серое (на пиксель приходится 
+	/* Если входное изображение не серое (на пиксель приходится
 	не 1 байт) возвращаем NULL. */
 	if(img->bytes_for_pix != 1)
 		return NULL;
@@ -249,7 +148,7 @@ ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions)
 
 	y_rest = height % n_size;	// вычисляем не влезшие пиксели по каждой оси
 	x_rest = width % n_size;
-	
+
 	y_divisions = height / n_size;	// определяем число по оси у
 	curr_x_size = curr_y_size = n_size;
 
@@ -287,7 +186,7 @@ ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions)
 			hist[k] /= (double)sum;
 			otsu_sum += hist[k] * (k + 1);
 		}
-	
+
 		otsu_sum_left = 0;
 		otsu_wL = 0;
 		otsu_wR = 0;
@@ -329,7 +228,7 @@ ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions)
 				out_img[curr_ind] = THRESHOLD(pix[curr_ind], otsu_trshld);
 			}
 		}
-	
+
 		/* Области с низкой сигмой будем считать фоном. */
 		if(deviate < max_dev){
 			if(mean < 128)
@@ -345,7 +244,7 @@ ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions)
 					out_img[curr_ind] = THRESHOLD(pix[curr_ind], mean);
 				}
 			}
-		}		
+		}
 
 		/* Переходим к следущему блоку. */
 		curr_x_size = curr_y_size = n_size;
@@ -359,12 +258,12 @@ ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions)
 				y_block++;
 			}
 		}
-		
+
 		if(x_block > divisions){
 			x_block = 0;
 			y_block++;	// переходим к след. строке
 		}
-		
+
 		if(y_block == y_divisions){
 			if(y_rest == 0)
 				break;	// завершаем программу.
@@ -387,9 +286,9 @@ ocr_img_info *ocr_imgproc_threshold_otsu(ocr_img_info *img, int divisions)
 	return result;
 }
 
-ocr_img_info *ocr_imgproc_threshold_sauvolas(ocr_img_info *img, int divisions)
+ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 {
-	/* Если входное изображение не серое (на пиксель приходится 
+	/* Если входное изображение не серое (на пиксель приходится
 	не 1 байт) возвращаем NULL. */
 	if(img->bytes_for_pix != 1)
 		return NULL;
@@ -416,7 +315,7 @@ ocr_img_info *ocr_imgproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 		k - подобрано эмпирически.
 	=================================================================*/
 	double k = 0.15, mean = 0.0, deviate = 0.0;	// varaibles for treshold calculating
-	
+
 	/* Get width & height for every tresholding area. */
 	n_size = width / divisions;
 	y_rest = height % n_size;
@@ -454,12 +353,12 @@ ocr_img_info *ocr_imgproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 		mean /= pix_count;
 		deviate /= pix_count;
 		deviate += sqrt(deviate - mean * mean);
-		
+
 		trshld = (int)(mean * (1 + k * ((double)deviate / R - 1)));
 		/* Use threshold for current area. */
 		for(i = 0; i < curr_y_size; i++){
 			y = y_block * n_size + i;
-			
+
 			for(j = 0; j < curr_x_size; j++){
 				x = x_block * n_size + j;
 				curr_ind = y * stride + x * rowpix;
@@ -481,12 +380,12 @@ ocr_img_info *ocr_imgproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 				y_block++;
 			}
 		}
-		
+
 		if(x_block > divisions){
 			x_block = 0;
 			y_block++;	// go to next row
 		}
-		
+
 		if(y_block == y_divisions){
 			if(y_rest == 0)
 				break;
@@ -501,7 +400,7 @@ ocr_img_info *ocr_imgproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 	return result;
 }
 
-void ocr_imgproc_filter_sobel(ocr_img_info *img)
+void ocr_preproc_filter_sobel(ocr_img_info *img)
 {
 	/* Если не серое изображение. */
 	if(img->bytes_for_pix == 1)
@@ -538,23 +437,23 @@ void ocr_imgproc_filter_sobel(ocr_img_info *img)
 	filter_x[0] = -1;
 	filter_x[1] = -2;
 	filter_x[2] = -1;
-	
+
 	filter_x[3] = 0;
 	filter_x[4] = 0;
 	filter_x[5] = 0;
-	
+
 	filter_x[6] = 1;
 	filter_x[7] = 2;
 	filter_x[8] = 1;
-	
+
 	filter_y[0] = 1;
 	filter_y[1] = 0;
 	filter_y[2] = -1;
-	
+
 	filter_y[3] = 2;
 	filter_y[4] = 0;
 	filter_y[5] = -2;
-	
+
 	filter_y[6] = 1;
 	filter_y[7] = 0;
 	filter_y[8] = -1;
@@ -590,7 +489,7 @@ void ocr_imgproc_filter_sobel(ocr_img_info *img)
 				sum_y += pix[curr + stride - rowpix] * filter_y[6];
 				sum_y += pix[curr + stride] * filter_y[7];
 				sum_y += pix[curr + stride + rowpix] * filter_y[8];
-	
+
 				if((sum_x * sum_x + sum_y * sum_y) <= 127 * 127){
 					out_img[curr - rowpix] = CR_WHITE;
 					out_img[curr] = CR_WHITE;
@@ -607,7 +506,7 @@ void ocr_imgproc_filter_sobel(ocr_img_info *img)
 	free(pix);
 }
 
-void ocr_imgproc_filter_gauss(ocr_img_info *img)
+void ocr_preproc_filter_gauss(ocr_img_info *img)
 {
 	/* Если не серое изображение. */
 	if(img->bytes_for_pix == 1)
@@ -633,15 +532,15 @@ void ocr_imgproc_filter_gauss(ocr_img_info *img)
 	filter[0] = 1;
 	filter[1] = 2;
 	filter[2] = 1;
-	
+
 	filter[3] = 2;
 	filter[4] = 4;
 	filter[5] = 2;
-	
+
 	filter[6] = 1;
 	filter[7] = 2;
 	filter[8] = 1;
-	
+
 	for(i = 0; i < height; i++){
 		for(j = 0; j < width; j++){
 			curr = i * stride + j * rowpix;
@@ -660,12 +559,12 @@ void ocr_imgproc_filter_gauss(ocr_img_info *img)
 
 			if(i > 0 && j < width - 1)
 				sum += filter[2] * pix[curr - stride + rowpix];
-			else			
+			else
 				cell_count--;
 
 			if(j > 0)
 				sum += filter[3] * pix[curr - rowpix];
-			else	
+			else
 				cell_count--;
 			sum += filter[4] * pix[curr];
 			if(j < width - 1)
@@ -680,7 +579,7 @@ void ocr_imgproc_filter_gauss(ocr_img_info *img)
 
 			if(i < height - 1)
 				sum += filter[7] * pix[curr + stride];
-			else	
+			else
 				cell_count--;
 
 			if(i < height - 1 && j < width - 1)
@@ -688,7 +587,7 @@ void ocr_imgproc_filter_gauss(ocr_img_info *img)
 			else
 				cell_count--;
 			tmp = (uchar) ((double)sum / 16);
-		
+
 
 			out_img[curr] = (uchar)tmp;
 			out_img[curr + 1] = (uchar)tmp;
@@ -705,7 +604,7 @@ static int compare(const void  *p1, const void *p2)
 	return (*(int *)p1 - *(int *)p2);
 }
 
-void ocr_imgproc_filter_median(ocr_img_info *img, int size)
+void ocr_preproc_filter_median(ocr_img_info *img, int size)
 {
 	if(img->bytes_for_pix != 1)
 		return;
@@ -740,7 +639,7 @@ void ocr_imgproc_filter_median(ocr_img_info *img, int size)
 	free(pix);
 }
 
-void ocr_imgproc_invert(ocr_img_info *img)
+void ocr_preproc_invert(ocr_img_info *img)
 {
 	if(img->bytes_for_pix != 1)
 		return;
