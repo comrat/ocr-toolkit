@@ -5,15 +5,13 @@
 #include <math.h>
 
 
-/* Функция преобразования цветного пикселя в серый. */
+/* This function convert colored pixel to the grayscale. */
 int rgb2grey(int r, int g, int b)
-{
-	return (int)((66 * r + 129 * g + 25 * b + 128) >> 8) + 16;
-}
+{ return (int)((66 * r + 129 * g + 25 * b + 128) >> 8) + 16; }
 
 ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img)
 {
-	/* Если входное изображение не цветное, выходим из функции.*/
+	/* Skip not colored image. */
 	if(img->bytes_for_pix < 3)
 		return NULL;
 
@@ -23,12 +21,13 @@ ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img)
 	int width = img->width;
 	int height = img->height;
 	int curr = 0;
-	int out_stride = (width % 4 == 0) ? width : width + (4 - width % 4);	// строка должна быть кратна 4
+	//TODO: remove magic number
+	int out_stride = (width % 4 == 0) ? width : width + (4 - width % 4);	// 4 is for mashine word
 	ocr_img_info *result = (ocr_img_info *)malloc(sizeof(ocr_img_info));
 	uchar *pix = img->pix;
 	uchar *out_img = (uchar *)malloc(sizeof(char) * height * out_stride);
-	for(i = 0; i < height; i++){
-		for(j = 0; j < width; j++){
+	for (i = 0; i < height; i++) {
+		for (j = 0; j < width; j++) {
 			curr = i * stride + j * rowpix;
 			out_img[i * out_stride + j] = (uchar)rgb2grey(pix[curr], pix[curr + 1], pix[curr + 2]);
 		}
@@ -42,64 +41,69 @@ ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img)
 	return result;
 }
 
-/* Дилатация изображения. */
+
 void ocr_preproc_dilate(ocr_img_info *img)
 {
-	/* Если изображение не бинаризованное, прерываем. */
+	/* Skip not binarized images */
 	if(img->bytes_for_pix != 1)
 		return;
 
-	int i = 0, j = 0;
+	int i = 0;
+	int j = 0;
 	int stride = img->stride;
 	int width = img->width;
 	int height = img->height;
 	int curr_ind = 0;
 	uchar *pix = img->pix;
 	uchar *out_img = (uchar *)malloc(sizeof(char) * height * stride);
-	for(i = 0; i < height; i++){
-		for(j = 0; j < width; j++){
+
+	for (i = 0; i < height; i++) {
+		for (j = 0; j < width; j++) {
 			curr_ind = i * stride + j;
-			// Если пиксель черный.
-			if(pix[curr_ind] == CR_BLACK){
-				if(i > 0)
+			if (pix[curr_ind] == CR_BLACK) {
+				if (i > 0)
 					out_img[curr_ind - stride] = CR_BLACK;
-				if(j > 0)
+				if (j > 0)
 					out_img[curr_ind - 1] = CR_BLACK;
 
 				out_img[curr_ind] = CR_BLACK;
 
-				if(j < width - 1)
+				if (j < width - 1)
 					out_img[curr_ind + 1] = CR_BLACK;
-				if(i < height - 1)
+				if (i < height - 1)
 					out_img[curr_ind + stride] = CR_BLACK;
-			}else
+			} else {
 				out_img[curr_ind] = CR_WHITE;
+			}
 		}
 	}
 	free(img->pix);
 	img->pix = out_img;
 }
 
+
 void ocr_preproc_errosion(ocr_img_info *img){
-	/* Если изображение не бинаризованное, прерываем. */
+	/* Skip not binarized images */
 	if(img->bytes_for_pix != 1)
 		return;
 
-	int i = 0, j = 0, ind = 0;
+	int i = 0;
+	int j = 0;
+	int ind = 0;
 	int width = img->width;
 	int height = img->height;
 	int stride = img->stride;
-	uchar *pix = img->pix;
-	uchar *out_img = (uchar *)malloc(sizeof(char) * width * height);
+	uchar* pix = img->pix;
+	uchar* out_img = (uchar *)malloc(sizeof(char) * width * height);
 
-	for(i = 0; i < height; i++){
-		for(j = 0; j < width; j++){
-			if(i > 0 && i < height && j > 0 && j < width){
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < width; ++j) {
+			if (i > 0 && i < height && j > 0 && j < width) {
 				ind = i * width + j;
 
-				if((pix[ind - stride] == CR_BLACK) &&
-				(pix[ind - 1] == CR_BLACK) && (pix[ind] == CR_BLACK) &&
-				(pix[ind + 1] == CR_BLACK) && (pix[ind + stride] == CR_BLACK))
+				if ((pix[ind - stride] == CR_BLACK) &&
+					(pix[ind - 1] == CR_BLACK) && (pix[ind] == CR_BLACK) &&
+					(pix[ind + 1] == CR_BLACK) && (pix[ind + stride] == CR_BLACK))
 					out_img[ind] = CR_BLACK;
 				else
 					out_img[ind] = CR_WHITE;
@@ -111,30 +115,32 @@ void ocr_preproc_errosion(ocr_img_info *img){
 	free(pix);
 }
 
+
 ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 {
-	/* Если входное изображение не серое (на пиксель приходится
-	не 1 байт) возвращаем NULL. */
+	/* Skip not grayscale images. */
 	if(img->bytes_for_pix != 1)
 		return NULL;
 
-	int i = 0, j = 0;
-	int x_block = 0, y_block = 0;		// переменные для областей
+	int i = 0;
+	int j = 0;
+	int x_block = 0;
+	int y_block = 0;
 	int x = 0, y = 0;
 	int curr_ind = 0, k = 0;
 	int curr_x_size = 0, curr_y_size = 0;
-	int otsu_trshld = 0;			// значение порга для текущей области
-	int n_size = 0;				// размер каждой области в пикселях
-	int pix_count = 1;			// число пикселей каждой области
-	int width = img->width;			// запоминаем текущее значения ширины
-	int height = img->height;		// высоты
-	int stride = img->stride;		// ширину строки изображения
+	int otsu_trshld = 0;			// threshold for corresponded block
+	int n_size = 0;					// block size in pixels.
+	int pix_count = 1;				// pix count in each block
+	int width = img->width;
+	int height = img->height;
+	int stride = img->stride;
 	int max_dev = 14;
-	int y_divisions = 0;			// число разбиений по оси y
+	int y_divisions = 0;			// verrtical divisions count
 	int y_rest = 0, x_rest = 0;
 
-	uchar *out_img;				// результирующее изображение
-	uchar *pix = img->pix;			// запоминаем указатель на входное изображение
+	uchar *out_img;
+	uchar *pix = img->pix;
 	double sum = 0;
 	double otsu_mL = 0, otsu_mR = 0;
 	double otsu_sum = 0, otsu_sum_left = 0;
