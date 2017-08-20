@@ -12,7 +12,7 @@ int rgb2grey(int r, int g, int b)
 ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img)
 {
 	/* Skip not colored image. */
-	if(img->bytes_for_pix < 3)
+	if (img->bytes_for_pix < 3)
 		return NULL;
 
 	int i = 0, j = 0;
@@ -26,8 +26,8 @@ ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img)
 	ocr_img_info *result = (ocr_img_info *)malloc(sizeof(ocr_img_info));
 	uchar *pix = img->pix;
 	uchar *out_img = (uchar *)malloc(sizeof(char) * height * out_stride);
-	for (i = 0; i < height; i++) {
-		for (j = 0; j < width; j++) {
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < width; ++j) {
 			curr = i * stride + j * rowpix;
 			out_img[i * out_stride + j] = (uchar)rgb2grey(pix[curr], pix[curr + 1], pix[curr + 2]);
 		}
@@ -45,7 +45,7 @@ ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img)
 void ocr_preproc_dilate(ocr_img_info *img)
 {
 	/* Skip not binarized images */
-	if(img->bytes_for_pix != 1)
+	if (img->bytes_for_pix != 1)
 		return;
 
 	int i = 0;
@@ -57,8 +57,8 @@ void ocr_preproc_dilate(ocr_img_info *img)
 	uchar *pix = img->pix;
 	uchar *out_img = (uchar *)malloc(sizeof(char) * height * stride);
 
-	for (i = 0; i < height; i++) {
-		for (j = 0; j < width; j++) {
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < width; ++j) {
 			curr_ind = i * stride + j;
 			if (pix[curr_ind] == CR_BLACK) {
 				if (i > 0)
@@ -82,9 +82,9 @@ void ocr_preproc_dilate(ocr_img_info *img)
 }
 
 
-void ocr_preproc_errosion(ocr_img_info *img){
+void ocr_preproc_errosion(ocr_img_info *img) {
 	/* Skip not binarized images */
-	if(img->bytes_for_pix != 1)
+	if (img->bytes_for_pix != 1)
 		return;
 
 	int i = 0;
@@ -119,7 +119,7 @@ void ocr_preproc_errosion(ocr_img_info *img){
 ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 {
 	/* Skip not grayscale images. */
-	if(img->bytes_for_pix != 1)
+	if (img->bytes_for_pix != 1)
 		return NULL;
 
 	int i = 0;
@@ -130,13 +130,13 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 	int curr_ind = 0, k = 0;
 	int curr_x_size = 0, curr_y_size = 0;
 	int otsu_trshld = 0;			// threshold for corresponded block
-	int n_size = 0;					// block size in pixels.
+	int block_size = 0;					// block size in pixels.
 	int pix_count = 1;				// pix count in each block
 	int width = img->width;
 	int height = img->height;
 	int stride = img->stride;
 	int max_dev = 14;
-	int y_divisions = 0;			// verrtical divisions count
+	int y_divisions = 0;
 	int y_rest = 0, x_rest = 0;
 
 	uchar *out_img;
@@ -145,33 +145,33 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 	double otsu_mL = 0, otsu_mR = 0;
 	double otsu_sum = 0, otsu_sum_left = 0;
 	double otsu_max = 0, otsu_between = 0;
-	double mean = 0.0, deviate = 0.0;	// мат. ожидание и дисперсия
-	double otsu_wL = 0, otsu_wR = 0;	// вес левого (ближе к 0) и правого (ближе к 255)
-	double *hist = (double *)malloc(sizeof(double) * 256);	// гистограмма градации серого
-	ocr_img_info *result = (ocr_img_info *)malloc(sizeof(ocr_img_info));	// результирующая информация об изображении
+	double mean = 0.0, deviate = 0.0;
+	double left_weight = 0, right_weight = 0;
+	double *hist = (double *)malloc(sizeof(double) * 256);
+	ocr_img_info *result = (ocr_img_info *)malloc(sizeof(ocr_img_info));
 
-	n_size = width / divisions;	// получаем размер каждой области
+	block_size = width / divisions;	// получаем размер каждой области
 
-	y_rest = height % n_size;	// вычисляем не влезшие пиксели по каждой оси
-	x_rest = width % n_size;
+	y_rest = height % block_size;	// вычисляем не влезшие пиксели по каждой оси
+	x_rest = width % block_size;
 
-	y_divisions = height / n_size;	// определяем число по оси у
-	curr_x_size = curr_y_size = n_size;
+	y_divisions = height / block_size;	// определяем число по оси у
+	curr_x_size = curr_y_size = block_size;
 
 	/* Инициализируем выходное изображение. */
 	out_img = (uchar *)malloc(sizeof(char) * height * stride);
 
-	for(;;){
+	for (;;) {
 		mean = 0; deviate = 0;
 		pix_count = curr_x_size * curr_y_size;	// вычисляем число пикселей в текущем блоке
 		/* Инициализируем гистограмму. */
-		for(k = 0; k < 256; k++){
+		for (k = 0; k < 256; ++k) {
 			hist[k] = 0;
 		}
-		for(i = 0; i < curr_y_size; i++){
-			y = y_block * n_size + i;		// вычисляем координату y пикселя в текущем блоке
-			for(j = 0; j < curr_x_size; j++){
-				x = x_block * n_size + j;	// вычисляем координату x пикселя в текущем блоке
+		for (i = 0; i < curr_y_size; ++i) {
+			y = y_block * block_size + i;		// вычисляем координату y пикселя в текущем блоке
+			for (j = 0; j < curr_x_size; ++j) {
+				x = x_block * block_size + j;	// вычисляем координату x пикселя в текущем блоке
 				curr_ind = y * stride + x;	// вычисляем индекс текущего пикселя
 				hist[pix[curr_ind]] += 1;
 				mean += pix[curr_ind];
@@ -186,66 +186,66 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 		sum = 0;
 		otsu_sum = 0;
 		/* Строим частотную гистограмму. */
-		for(k = 0; k < 256; k++)
+		for (k = 0; k < 256; ++k)
 			sum += hist[k];
-		for(k = 0; k < 256; k++){
+		for (k = 0; k < 256; ++k) {
 			hist[k] /= (double)sum;
 			otsu_sum += hist[k] * (k + 1);
 		}
 
 		otsu_sum_left = 0;
-		otsu_wL = 0;
-		otsu_wR = 0;
+		left_weight = 0;
+		right_weight = 0;
 		otsu_mL = 0;
 		otsu_mR = 0;
 		otsu_max = 0;
 		otsu_trshld = 0;
 
-		for(k = 0; k < 256; k++){
-			otsu_wL += hist[k];	// вычисляем вес слева
+		for (k = 0; k < 256; ++k) {
+			left_weight += hist[k];	// вычисляем вес слева
 
-			if(otsu_wL == 0)
+			if (left_weight == 0)
 				continue;
 
-			if(otsu_wL > 1)		// немного магии
-				otsu_wL = 1;
+			if (left_weight > 1)		// немного магии
+				left_weight = 1;
 
-			otsu_wR = 1 - otsu_wL;	// вычисляем вес справа (1 - максимальное значение)
-			if(otsu_wR == 0)
+			right_weight = 1 - left_weight;	// вычисляем вес справа (1 - максимальное значение)
+			if (right_weight == 0)
 				break;
 			otsu_sum_left += (k + 1) * hist[k];
-			otsu_mL = (double)otsu_sum_left / otsu_wL;
-			otsu_mR = (double)(otsu_sum - otsu_sum_left) / otsu_wR;
+			otsu_mL = (double)otsu_sum_left / left_weight;
+			otsu_mR = (double)(otsu_sum - otsu_sum_left) / right_weight;
 
-			otsu_between = otsu_wL * otsu_wR * (otsu_mL - otsu_mR) * (otsu_mL - otsu_mR);
+			otsu_between = left_weight * right_weight * (otsu_mL - otsu_mR) * (otsu_mL - otsu_mR);
 
-			if(otsu_between >= otsu_max){
+			if (otsu_between >= otsu_max) {
 				otsu_max = otsu_between;
 				otsu_trshld = k;
 			}
 		}
 
 		/* Применяем полученный порог к текущей области. */
-		for(i = 0; i < curr_y_size; i++){
-			y = y_block * n_size + i;
-			for(j = 0; j < curr_x_size; j++){
-				x = x_block * n_size + j;
+		for (i = 0; i < curr_y_size; ++i) {
+			y = y_block * block_size + i;
+			for (j = 0; j < curr_x_size; ++j) {
+				x = x_block * block_size + j;
 				curr_ind = y * stride + x;
 				out_img[curr_ind] = THRESHOLD(pix[curr_ind], otsu_trshld);
 			}
 		}
 
 		/* Области с низкой сигмой будем считать фоном. */
-		if(deviate < max_dev){
-			if(mean < 128)
+		if (deviate < max_dev) {
+			if (mean < 128)
 				mean -= max_dev;
 			else
 				mean += max_dev;
 			mean = 128;
-			for(i = 0; i < curr_y_size; i++){
-				y = y_block * n_size + i;
-				for(j = 0; j < curr_x_size; j++){
-					x = x_block * n_size + j;
+			for (i = 0; i < curr_y_size; ++i) {
+				y = y_block * block_size + i;
+				for (j = 0; j < curr_x_size; ++j) {
+					x = x_block * block_size + j;
 					curr_ind = y * stride + x;
 					out_img[curr_ind] = THRESHOLD(pix[curr_ind], mean);
 				}
@@ -253,40 +253,39 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 		}
 
 		/* Переходим к следущему блоку. */
-		curr_x_size = curr_y_size = n_size;
-		x_block++;		// увеличиваем x блок
+		curr_x_size = curr_y_size = block_size;
+		x_bloc++k;		// увеличиваем x блок
 		/* Если прошли до последнего блока в строке: */
-		if(x_block == divisions){
-			if(x_rest != 0){
+		if (x_block == divisions) {
+			if (x_rest != 0) {
 				curr_x_size = x_rest;
 			}else{
 				x_block = 0;	// переходим к след. строке
-				y_block++;
+				y_bloc++k;
 			}
 		}
 
-		if(x_block > divisions){
+		if (x_block > divisions) {
 			x_block = 0;
-			y_block++;	// переходим к след. строке
+			y_bloc++k;	// переходим к след. строке
 		}
 
-		if(y_block == y_divisions){
-			if(y_rest == 0)
+		if (y_block == y_divisions) {
+			if (y_rest == 0)
 				break;	// завершаем программу.
 			else{
 				curr_y_size = y_rest;
 			}
 		}
 
-		if(y_block > y_divisions)
+		if (y_block > y_divisions)
 			break;
 	}
 
 	result->width = width;
 	result->height = height;
 	result->stride = stride;	// шаг для бинаризованного изображения не нужен
-	result->bytes_for_pix = 1;	// так как изображение бинаризовано
-					// используется 1 байт для каждого пикселя
+	result->bytes_for_pix = 1;	// one byte for binarized image
 	result->pix = out_img;		// ссылаемся на полученное изображение
 
 	return result;
@@ -296,13 +295,13 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 {
 	/* Если входное изображение не серое (на пиксель приходится
 	не 1 байт) возвращаем NULL. */
-	if(img->bytes_for_pix != 1)
+	if (img->bytes_for_pix != 1)
 		return NULL;
 
 	int i = 0, j = 0, x_block = 0, y_block = 0;
 	int x = 0, y = 0, curr_ind = 0;
 	int curr_x_size = 0, curr_y_size = 0;
-	int n_size = 0;
+	int block_size = 0;
 	int pix_count = 1;
 	int width = img->width;
 	int height = img->height;
@@ -323,31 +322,31 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 	double k = 0.15, mean = 0.0, deviate = 0.0;	// varaibles for treshold calculating
 
 	/* Get width & height for every tresholding area. */
-	n_size = width / divisions;
-	y_rest = height % n_size;
-	x_rest = width % n_size;
-	y_divisions = height / n_size;
+	block_size = width / divisions;
+	y_rest = height % block_size;
+	x_rest = width % block_size;
+	y_divisions = height / block_size;
 	/* Allocate memeory for considered window of image. */
-	curr_window = (unsigned char **)malloc(sizeof(unsigned char *) * n_size);
-	for(i = 0; i < n_size; i++){
-		curr_window[i] = (unsigned char *)malloc(sizeof(char) * n_size);
-		for(j = 0; j < n_size; j++){
+	curr_window = (unsigned char **)malloc(sizeof(unsigned char *) * block_size);
+	for (i = 0; i < block_size; ++i) {
+		curr_window[i] = (unsigned char *)malloc(sizeof(char) * block_size);
+		for (j = 0; j < block_size; ++j) {
 			curr_window[i][j] = 0;
 		}
 	}
-	curr_x_size = curr_y_size = n_size;
+	curr_x_size = curr_y_size = block_size;
 
 	/* Initialize output image. */
-	for(;;){
+	for (;;) {
 		pix_count = curr_x_size * curr_y_size;
 		mean = 0.0; deviate = 0.0;
 		/* Calculate mean value. */
-		for(i = 0; i < curr_y_size; i++){
-			y = y_block * n_size + i;
+		for (i = 0; i < curr_y_size; ++i) {
+			y = y_block * block_size + i;
 
-			for(j = 0; j < curr_x_size; j++){
+			for (j = 0; j < curr_x_size; ++j) {
 				// look up pixels in one area
-				x = x_block * n_size + j;
+				x = x_block * block_size + j;
 				// get greyscale value:
 				curr_ind = y * stride + x * rowpix;
 				//printf("%d--\n", curr_ind);
@@ -362,11 +361,11 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 
 		trshld = (int)(mean * (1 + k * ((double)deviate / R - 1)));
 		/* Use threshold for current area. */
-		for(i = 0; i < curr_y_size; i++){
-			y = y_block * n_size + i;
+		for (i = 0; i < curr_y_size; ++i) {
+			y = y_block * block_size + i;
 
-			for(j = 0; j < curr_x_size; j++){
-				x = x_block * n_size + j;
+			for (j = 0; j < curr_x_size; ++j) {
+				x = x_block * block_size + j;
 				curr_ind = y * stride + x * rowpix;
 				curr_color = THRESHOLD(curr_window[i][j], trshld);
 				out_img[curr_ind] = curr_color;
@@ -374,33 +373,33 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 				out_img[curr_ind + 2] = curr_color;
 			}
 		}
-		curr_x_size = curr_y_size = n_size;
+		curr_x_size = curr_y_size = block_size;
 		/* Prepare to next iterarion. */
-		x_block++;		// go to next x-block
+		x_bloc++k;		// go to next x-block
 		// if we reach last area in row...
-		if(x_block == divisions){
-			if(x_rest != 0){
+		if (x_block == divisions) {
+			if (x_rest != 0) {
 				curr_x_size = x_rest;
 			}else{
 				x_block = 0;
-				y_block++;
+				y_bloc++k;
 			}
 		}
 
-		if(x_block > divisions){
+		if (x_block > divisions) {
 			x_block = 0;
-			y_block++;	// go to next row
+			y_bloc++k;	// go to next row
 		}
 
-		if(y_block == y_divisions){
-			if(y_rest == 0)
+		if (y_block == y_divisions) {
+			if (y_rest == 0)
 				break;
 			else{
 				curr_y_size = y_rest;
 			}
 		}
 
-		if(y_block > y_divisions)
+		if (y_block > y_divisions)
 			break;
 	}
 	return result;
@@ -408,8 +407,8 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 
 void ocr_preproc_filter_sobel(ocr_img_info *img)
 {
-	/* Если не серое изображение. */
-	if(img->bytes_for_pix == 1)
+	/* Skip not grayscale image. */
+	if (img->bytes_for_pix == 1)
 		return;
 
 	int *filter_x, *filter_y;
@@ -464,11 +463,10 @@ void ocr_preproc_filter_sobel(ocr_img_info *img)
 	filter_y[7] = 0;
 	filter_y[8] = -1;
 
-	//out_img = preproc_filter(img, filter);
-	for(i = 0; i < height; i++){
-		for(j = 0; j < width; j++){
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < width; ++j) {
 			curr = i * stride + j * rowpix;
-			if(i > 0 && j > 0 && i < height - 1 && j < width - 1){
+			if (i > 0 && j > 0 && i < height - 1 && j < width - 1) {
 				sum_x = 0;
 				sum_y = 0;
 
@@ -496,7 +494,7 @@ void ocr_preproc_filter_sobel(ocr_img_info *img)
 				sum_y += pix[curr + stride] * filter_y[7];
 				sum_y += pix[curr + stride + rowpix] * filter_y[8];
 
-				if((sum_x * sum_x + sum_y * sum_y) <= 127 * 127){
+				if ((sum_x * sum_x + sum_y * sum_y) <= 127 * 127) {
 					out_img[curr - rowpix] = CR_WHITE;
 					out_img[curr] = CR_WHITE;
 					out_img[curr + rowpix] = CR_WHITE;
@@ -514,8 +512,8 @@ void ocr_preproc_filter_sobel(ocr_img_info *img)
 
 void ocr_preproc_filter_gauss(ocr_img_info *img)
 {
-	/* Если не серое изображение. */
-	if(img->bytes_for_pix == 1)
+	/* Skip not grayscale image. */
+	if (img->bytes_for_pix == 1)
 		return;
 
 	int i, j, curr;
@@ -526,7 +524,7 @@ void ocr_preproc_filter_gauss(ocr_img_info *img)
 	int sum = 0;
 	int cell_count = 9;
 	char tmp;
-	/* Фильтр Гаусса.
+	/* Filter kernel
 		|1|2|1|
 		|2|4|2|
 		|1|2|1|
@@ -547,53 +545,52 @@ void ocr_preproc_filter_gauss(ocr_img_info *img)
 	filter[7] = 2;
 	filter[8] = 1;
 
-	for(i = 0; i < height; i++){
-		for(j = 0; j < width; j++){
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < width; ++j) {
 			curr = i * stride + j * rowpix;
 			sum = 0;
 			cell_count = 9;
 
-			if(i > 0 && j > 0)
+			if (i > 0 && j > 0)
 				sum += filter[0] * pix[curr - stride - rowpix];
 			else
 				cell_count--;
 
-			if(i > 0)
+			if (i > 0)
 				sum += filter[1] * pix[curr - stride];
 			else
 				cell_count--;
 
-			if(i > 0 && j < width - 1)
+			if (i > 0 && j < width - 1)
 				sum += filter[2] * pix[curr - stride + rowpix];
 			else
 				cell_count--;
 
-			if(j > 0)
+			if (j > 0)
 				sum += filter[3] * pix[curr - rowpix];
 			else
 				cell_count--;
 			sum += filter[4] * pix[curr];
-			if(j < width - 1)
+			if (j < width - 1)
 				sum += filter[5] * pix[curr + rowpix];
 			else
 				cell_count--;
 
-			if(i < height - 1 && j > 0)
+			if (i < height - 1 && j > 0)
 				sum += filter[6] * pix[curr + stride - rowpix];
 			else
 				cell_count--;
 
-			if(i < height - 1)
+			if (i < height - 1)
 				sum += filter[7] * pix[curr + stride];
 			else
 				cell_count--;
 
-			if(i < height - 1 && j < width - 1)
+			if (i < height - 1 && j < width - 1)
 				sum += filter[8] * pix[curr + stride + rowpix];
 			else
 				cell_count--;
 			tmp = (uchar) ((double)sum / 16);
-
 
 			out_img[curr] = (uchar)tmp;
 			out_img[curr + 1] = (uchar)tmp;
@@ -604,15 +601,15 @@ void ocr_preproc_filter_gauss(ocr_img_info *img)
 	free(pix);
 }
 
+
 /* Функция сравнения чисел для быстрой сортировки. */
 static int compare(const void  *p1, const void *p2)
-{
-	return (*(int *)p1 - *(int *)p2);
-}
+{ return (*(int *)p1 - *(int *)p2); }
+
 
 void ocr_preproc_filter_median(ocr_img_info *img, int size)
 {
-	if(img->bytes_for_pix != 1)
+	if (img->bytes_for_pix != 1)
 		return;
 
 	int i = 0, j = 0, curr = 0;
@@ -620,24 +617,24 @@ void ocr_preproc_filter_median(ocr_img_info *img, int size)
 	int width = img->width - size;
 	int height = img->height - size;
 	int stride = img->stride;
-	int win_size = (size * 2 + 1) * (size * 2 + 1);	// ширина окна = текущий пиксель + отступ в size с каждой стороны.
+	int wiblock_size = (size * 2 + 1) * (size * 2 + 1);	// ширина окна = текущий пиксель + отступ в size с каждой стороны.
 
 	int side = 2 * size + 1;
 	uchar *pix = img->pix;
 	uchar *out_img = (uchar *)malloc(sizeof(uchar) * stride * height);
-	uchar *window = (uchar *)malloc(sizeof(uchar) * win_size);
-	for(i = size; i < height; i++){
-		for(j = size; j < width; j++){
+	uchar *window = (uchar *)malloc(sizeof(uchar) * wiblock_size);
+	for (i = size; i < height; ++i) {
+		for (j = size; j < width; ++j) {
 			curr = i * stride + j;
-			for(k = -size; k <= size; k++){
-				for(l = -size; l <= size; l++){
+			for (k = -size; k <= size; ++k) {
+				for (l = -size; l <= size; ++l) {
 					window[k * side + l] = pix[curr + k * stride + l];
 				}
 			}
 			/* Сортируем элементы в текущем окне. */
-			qsort(window, win_size, sizeof(uchar), compare);
+			qsort(window, wiblock_size, sizeof(uchar), compare);
 			/* Присваиваем средний элемент текущему. */
-			out_img[curr] = window[win_size / 2];
+			out_img[curr] = window[wiblock_size / 2];
 		}
 	}
 	img->pix = out_img;
@@ -647,7 +644,7 @@ void ocr_preproc_filter_median(ocr_img_info *img, int size)
 
 void ocr_preproc_invert(ocr_img_info *img)
 {
-	if(img->bytes_for_pix != 1)
+	if (img->bytes_for_pix != 1)
 		return;
 
 	int i = 0, j = 0;
@@ -655,8 +652,8 @@ void ocr_preproc_invert(ocr_img_info *img)
 	int height = img->height;
 	int stride = img->stride;
 
-	for(i = 0; i < height; i++){
-		for(j = 0; j < width; j++){
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < width; ++j) {
 			img->pix[i * stride + j] = 255 - img->pix[i * stride + j];
 		}
 	}
