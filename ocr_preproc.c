@@ -129,9 +129,9 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 	int x = 0, y = 0;
 	int curr_ind = 0, k = 0;
 	int curr_x_size = 0, curr_y_size = 0;
-	int otsu_trshld = 0;			// threshold for corresponded block
-	int block_size = 0;					// block size in pixels.
-	int pix_count = 1;				// pix count in each block
+	int otsu_trshld = 0;
+	int block_size = 0;
+	int pix_count = 1;
 	int width = img->width;
 	int height = img->height;
 	int stride = img->stride;
@@ -150,7 +150,7 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 	double *hist = (double *)malloc(sizeof(double) * 256);
 	ocr_img_info *result = (ocr_img_info *)malloc(sizeof(ocr_img_info));
 
-	block_size = width / divisions;	// получаем размер каждой области
+	block_size = width / divisions;
 
 	y_rest = height % block_size;	// вычисляем не влезшие пиксели по каждой оси
 	x_rest = width % block_size;
@@ -158,34 +158,35 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 	y_divisions = height / block_size;	// определяем число по оси у
 	curr_x_size = curr_y_size = block_size;
 
-	/* Инициализируем выходное изображение. */
 	out_img = (uchar *)malloc(sizeof(char) * height * stride);
 
 	for (;;) {
 		mean = 0; deviate = 0;
-		pix_count = curr_x_size * curr_y_size;	// вычисляем число пикселей в текущем блоке
-		/* Инициализируем гистограмму. */
+		pix_count = curr_x_size * curr_y_size;
+
 		for (k = 0; k < 256; ++k) {
 			hist[k] = 0;
 		}
+
 		for (i = 0; i < curr_y_size; ++i) {
-			y = y_block * block_size + i;		// вычисляем координату y пикселя в текущем блоке
+			y = y_block * block_size + i;		// get Y coordinate in current block
 			for (j = 0; j < curr_x_size; ++j) {
-				x = x_block * block_size + j;	// вычисляем координату x пикселя в текущем блоке
-				curr_ind = y * stride + x;	// вычисляем индекс текущего пикселя
+				x = x_block * block_size + j;	// get X coordinate in current block
+				curr_ind = y * stride + x;		// get current pixel index
 				hist[pix[curr_ind]] += 1;
 				mean += pix[curr_ind];
 				deviate += pix[curr_ind] * pix[curr_ind];
 			}
 		}
-		/* Заранее посчитаем мат. ожидание и сигму. */
+		/* Calculate mean value and sigma. */
 		mean /= pix_count;
 		deviate /= pix_count;
 		deviate = sqrt(deviate - mean * mean);
 
 		sum = 0;
 		otsu_sum = 0;
-		/* Строим частотную гистограмму. */
+
+		/* Build frequency histogram. */
 		for (k = 0; k < 256; ++k)
 			sum += hist[k];
 		for (k = 0; k < 256; ++k) {
@@ -202,15 +203,16 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 		otsu_trshld = 0;
 
 		for (k = 0; k < 256; ++k) {
-			left_weight += hist[k];	// вычисляем вес слева
+			left_weight += hist[k];	// calculate left side weight
 
 			if (left_weight == 0)
 				continue;
 
-			if (left_weight > 1)		// немного магии
+			// keep value valid
+			if (left_weight > 1)
 				left_weight = 1;
 
-			right_weight = 1 - left_weight;	// вычисляем вес справа (1 - максимальное значение)
+			right_weight = 1 - left_weight;	// right side weight
 			if (right_weight == 0)
 				break;
 			otsu_sum_left += (k + 1) * hist[k];
@@ -225,7 +227,7 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 			}
 		}
 
-		/* Применяем полученный порог к текущей области. */
+		/* Apply threshold on current block. */
 		for (i = 0; i < curr_y_size; ++i) {
 			y = y_block * block_size + i;
 			for (j = 0; j < curr_x_size; ++j) {
@@ -235,7 +237,7 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 			}
 		}
 
-		/* Области с низкой сигмой будем считать фоном. */
+		/* Treat block with small signa as background. */
 		if (deviate < max_dev) {
 			if (mean < 128)
 				mean -= max_dev;
@@ -252,22 +254,22 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 			}
 		}
 
-		/* Переходим к следущему блоку. */
+		/* Go to next block. */
 		curr_x_size = curr_y_size = block_size;
-		x_bloc++k;		// увеличиваем x блок
+		++x_block;		// увеличиваем x блок
 		/* Если прошли до последнего блока в строке: */
 		if (x_block == divisions) {
 			if (x_rest != 0) {
 				curr_x_size = x_rest;
 			}else{
 				x_block = 0;	// переходим к след. строке
-				y_bloc++k;
+				++y_block;
 			}
 		}
 
 		if (x_block > divisions) {
 			x_block = 0;
-			y_bloc++k;	// переходим к след. строке
+			++y_block;	// переходим к след. строке
 		}
 
 		if (y_block == y_divisions) {
@@ -375,20 +377,20 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 		}
 		curr_x_size = curr_y_size = block_size;
 		/* Prepare to next iterarion. */
-		x_bloc++k;		// go to next x-block
+		++x_block;		// go to next x-block
 		// if we reach last area in row...
 		if (x_block == divisions) {
 			if (x_rest != 0) {
 				curr_x_size = x_rest;
 			}else{
 				x_block = 0;
-				y_bloc++k;
+				++y_block;
 			}
 		}
 
 		if (x_block > divisions) {
 			x_block = 0;
-			y_bloc++k;	// go to next row
+			++y_block;	// go to next row
 		}
 
 		if (y_block == y_divisions) {
@@ -421,23 +423,20 @@ void ocr_preproc_filter_sobel(ocr_img_info *img)
 	int sum_y = 0;
 	uchar *out_img = (uchar *)malloc(sizeof(char) * height * stride);
 	uchar *pix = img->pix;
-	/* Создадим матрицу размерности 3х3
-		|0|1|2|
-		|3|4|5|
-		|6|7|8|
-	*/
-	filter_x = (int *)malloc(sizeof(int) * 9);
-	/* Фильтр Собеля по x.
+
+	/* Sobel x-filter
 		|-1|-2|-1|
 		|_0|_0|_0|
 		|_1|_2|_1|
 	*/
-	filter_y = (int *)malloc(sizeof(int) * 9);
-	/* Фильтр Собеля по y.
+	filter_x = (int *)malloc(sizeof(int) * 9);
+
+	/* Sobel x-filter
 		|_1|_0|-1|
 		|_2|_0|-2|
 		|_1|_0|-1|
 	*/
+	filter_y = (int *)malloc(sizeof(int) * 9);
 
 	filter_x[0] = -1;
 	filter_x[1] = -2;
