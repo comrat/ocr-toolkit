@@ -60,8 +60,15 @@ void ocr_preproc_filter_sobel(ocr_img_info *img);
 void ocr_preproc_filter_gauss(ocr_img_info *img);
 
 
+
 /** 3
- * медианный фильтр.
+ * ocr_preproc_filter_median - Median filter
+ * for input image \fIimg\fP.
+ * This filter applies mean value of block with
+ * \fIsize\fP size
+ *
+ * RETURN VALUE
+ * This function returns no value.
  */
 void ocr_preproc_filter_median(ocr_img_info *img, int size);
 

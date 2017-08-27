@@ -5,6 +5,11 @@
 #include <math.h>
 
 
+/* Compare function for qsort. */
+static int compare(const void  *p1, const void *p2)
+{ return (*(int *)p1 - *(int *)p2); }
+
+
 /* This function convert colored pixel to the grayscale. */
 int rgb2grey(int r, int g, int b)
 { return (int)((66 * r + 129 * g + 25 * b + 128) >> 8) + 16; }
@@ -152,10 +157,11 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 
 	block_size = width / divisions;
 
-	y_rest = height % block_size;	// вычисляем не влезшие пиксели по каждой оси
+	// rest pixels count
+	y_rest = height % block_size;
 	x_rest = width % block_size;
 
-	y_divisions = height / block_size;	// определяем число по оси у
+	y_divisions = height / block_size;
 	curr_x_size = curr_y_size = block_size;
 
 	out_img = (uchar *)malloc(sizeof(char) * height * stride);
@@ -256,25 +262,26 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 
 		/* Go to next block. */
 		curr_x_size = curr_y_size = block_size;
-		++x_block;		// увеличиваем x блок
-		/* Если прошли до последнего блока в строке: */
+		++x_block;
+
+		/* Go to the next row if it's last horizontal block: */
 		if (x_block == divisions) {
 			if (x_rest != 0) {
 				curr_x_size = x_rest;
-			}else{
-				x_block = 0;	// переходим к след. строке
+			} else {
+				x_block = 0;
 				++y_block;
 			}
 		}
 
 		if (x_block > divisions) {
 			x_block = 0;
-			++y_block;	// переходим к след. строке
+			++y_block;	// next row
 		}
 
 		if (y_block == y_divisions) {
 			if (y_rest == 0)
-				break;	// завершаем программу.
+				break;	// break cycle
 			else{
 				curr_y_size = y_rest;
 			}
@@ -286,17 +293,16 @@ ocr_img_info *ocr_preproc_threshold_otsu(ocr_img_info *img, int divisions)
 
 	result->width = width;
 	result->height = height;
-	result->stride = stride;	// шаг для бинаризованного изображения не нужен
-	result->bytes_for_pix = 1;	// one byte for binarized image
-	result->pix = out_img;		// ссылаемся на полученное изображение
+	result->stride = stride;
+	result->bytes_for_pix = 1;	// 1 byte for binarized image
+	result->pix = out_img;
 
 	return result;
 }
 
 ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 {
-	/* Если входное изображение не серое (на пиксель приходится
-	не 1 байт) возвращаем NULL. */
+	/* Skip not grayscale images. */
 	if (img->bytes_for_pix != 1)
 		return NULL;
 
@@ -382,7 +388,7 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 		if (x_block == divisions) {
 			if (x_rest != 0) {
 				curr_x_size = x_rest;
-			}else{
+			} else {
 				x_block = 0;
 				++y_block;
 			}
@@ -497,7 +503,7 @@ void ocr_preproc_filter_sobel(ocr_img_info *img)
 					out_img[curr - rowpix] = CR_WHITE;
 					out_img[curr] = CR_WHITE;
 					out_img[curr + rowpix] = CR_WHITE;
-				}else{
+				} else {
 					out_img[curr - rowpix] = CR_BLACK;
 					out_img[curr] = CR_BLACK;
 					out_img[curr + rowpix] = CR_BLACK;
@@ -601,11 +607,6 @@ void ocr_preproc_filter_gauss(ocr_img_info *img)
 }
 
 
-/* Функция сравнения чисел для быстрой сортировки. */
-static int compare(const void  *p1, const void *p2)
-{ return (*(int *)p1 - *(int *)p2); }
-
-
 void ocr_preproc_filter_median(ocr_img_info *img, int size)
 {
 	if (img->bytes_for_pix != 1)
@@ -637,7 +638,6 @@ void ocr_preproc_filter_median(ocr_img_info *img, int size)
 		}
 	}
 	img->pix = out_img;
-	/* Освобождаем старый указатель. */
 	free(pix);
 }
 
