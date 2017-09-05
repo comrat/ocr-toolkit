@@ -325,7 +325,7 @@ ocr_img_info *ocr_preproc_threshold_sauvolas(ocr_img_info *img, int divisions)
 	ocr_img_info *result = (ocr_img_info *)malloc(sizeof(ocr_img_info));
 	/*==================Treshold computing:==========================
 		trshld = mean * (1 + k * (deviate / R - 1))
-		k - подобрано эмпирически.
+		k was adjusted experimental way
 	=================================================================*/
 	double k = 0.15, mean = 0.0, deviate = 0.0;	// varaibles for treshold calculating
 
@@ -617,7 +617,7 @@ void ocr_preproc_filter_median(ocr_img_info *img, int size)
 	int width = img->width - size;
 	int height = img->height - size;
 	int stride = img->stride;
-	int wiblock_size = (size * 2 + 1) * (size * 2 + 1);	// ширина окна = текущий пиксель + отступ в size с каждой стороны.
+	int wiblock_size = (size * 2 + 1) * (size * 2 + 1);	// window size = icurrent pixel + shift from both sides
 
 	int side = 2 * size + 1;
 	uchar *pix = img->pix;
@@ -631,9 +631,8 @@ void ocr_preproc_filter_median(ocr_img_info *img, int size)
 					window[k * side + l] = pix[curr + k * stride + l];
 				}
 			}
-			/* Сортируем элементы в текущем окне. */
 			qsort(window, wiblock_size, sizeof(uchar), compare);
-			/* Присваиваем средний элемент текущему. */
+			/* Assign mean value to the current element. */
 			out_img[curr] = window[wiblock_size / 2];
 		}
 	}
