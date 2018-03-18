@@ -14,84 +14,85 @@ typedef enum
 	ARGB
 } pix_type;
 
-/* Тип компоненты. */
+
+/* Graphics component type. */
 typedef enum
 {
-	PICTURE,	// рисунок
-	NOISE,		// шум или часть фона
-	TEXT,		// текст
-	FORMULA		// формула
+	PICTURE,
+	NOISE,
+	TEXT,
+	FORMULA
 } comp_type;
 
-/* Стуктура для хранения данных об изображении. */
+
+/* Image data struct. */
 typedef struct
 {
-	uchar *pix;		// указатель на изображение
-	int width;		// ширина изображения
-	int height;		// высота изображения
-	int stride;		// число байт на каждую строку изображения
-	int bytes_for_pix;	// число байт на каждый пиксел изображения
+	uchar *pix;
+	int width;
+	int height;
+	int stride;			// bytes count per line
+	int bytes_for_pix;	// bytes count per pixel
 } ocr_img_info;
 
-/* Структура координаты точки */
+
+/* Pixel coordinates struct. */
 typedef struct
 {
-	int x;	// координата по горизонтали
-	int y;	// координата по вертикали
+	int x;	// horiontal coordinate
+	int y;	// vertical coordinate
 } coord;
 
-/* Структура для хранения сетки наложенной на изображение,
-   каждая клетка которой явлется либо фоном либо нет. */
+
+/* Image info grid each cell can contain info or be background. */
 typedef struct
 {
-	uchar **net;	// указатель на двумерную сетку
-	int width;	// ширина
-	int height;	// высота
-	int cell_width;	// ширина клетки, занимаемая на изображении
-	int comp_count;	// число компонент связности на сетке
+	uchar **net;	// grid
+	int width;
+	int height;
+	int cell_width;
+	int comp_count;
 } ocr_cells_net;
 
-/* Структура информации о компоненте связности. */
+
+/* Compound component struct. */
 typedef struct
 {
-	coord *coords;	// указатель на массив координат точек
-			// компоненты связности
-	coord up_left;	// координата левой врехней точки диагонали
-			// прямоугольной области компоненты
-	coord bot_right;// нижняя правая точка диагонали
-	coord center;	// центр прямоугольной области
-	comp_type type;	// тип компоненты
-	int size;	// число точек из которых состоит компонента
-	int width;	// ширина прямоугольной области
-	int height;	// высота прямоугольной области
+	coord *coords;	// cordinates array
+	coord up_left;	// Up left point of diagonal of component coordinate
+	coord bot_right;// bottom right point of diagonal of component coordinate
+	coord center;	// center of rectangle area
+	comp_type type;
+	int size;		// component points length
+	int width;
+	int height;
 } ocr_con_comp;
 
-/* Структура с инфорамацией о текстосодержащей области
-изображения. */
+
+/* Text containing image area info struct. */
 typedef struct
 {
-	uchar **pix;	// 2-мерный массив пикселей текстовой области
-	int x;		// x - координата начала области
-	int y;		// y - координата начала области
-	int width;	// ширина области
-	int height;	// высота области
+	uchar **pix;
+	int x;
+	int y;
+	int width;
+	int height;
 } ocr_text_area;
 
-/* Структура с информацией о доле черных пикселей
-в строке или столбце сегмента. */
+
+/* Black&white pixels proportion info struct. */
 typedef struct
 {
-	double *portion;// доля черных пикселей в каждой строке или столбце
-	int count;	// число строк или столбцов в компоненте
+	double *portion;	// part of black pixel in line
+	int count;			// line length in pixels
 } ocr_segm_stat_info;
 
-/* Структура для хранения информации об интервалах
-возрастания и убывания значений гистограммы. */
+
+/* Thresholded value part of histogram info struct. */
 typedef struct
 {
-	int count;	// число подряд идущих значени гистограммы
-	uchar position;	// значение указывющие положение значений
-			// 0 - если ниже, 255 - если выше
+	int count;		// length of one of thresholded value interval
+	uchar position;	// 0 if value is below threshod 255 otherwise
 } ocr_hist_interval;
 
 #endif	/* __OCR_META__ */
