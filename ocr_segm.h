@@ -7,46 +7,38 @@
 #endif /* USE_META */
 
 /** 3
- * ocr_segm_get_net - функция возвращает прямоугольную
- * область на изображении, на которой предположительно
- * находится строка.
- * Указатель на структуру \fIocr_img_info\fP с серым изображением.
- * Входное изображение разбивается сеткой, где ширина клетки
- * составляет \fIpercent\fP долю от изображения.
- * Для каждой клетки находиться дисперсия и сравнивается с
- * пороговой \fIsigma_thrs\fP. Клетки с меньшей дисперсией
- * считаются фоном, иначе - не фоном.
+ * ocr_segm_get_net - function returns net where each cell
+ * is background or not.
+ * \fIocr_img_info\fP - pointer to the grayscale image.
+ * Input image is devided on \fIcells_count\fP in both
+ * dimensions. iDispersion is callculated for each cell
+ * in comparation with \fIsigma_thrs\fP threshod.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает указатель на структуру с информацией
- * о сетке, наложенноцй на изображении \fBstruct ocr_cells_net\fP,
- * где каждая клеика отмечена либо как фон, либо как не фон.
- * в которой предположительно находится линия.
- * В случае ошибки входных данных функция возвращает NULL.
+ * RETURN VALUE
+ * Function returns pointer to the grid where each
+ * cell is background or not. If any error occured return NULL.
  */
 ocr_cells_net *ocr_segm_get_net(ocr_img_info *grey, int cells_count, double sigma_thrs);
 
 
 /** 3
- * ocr_con_comp - функция возвращает массив компонент
- * связностей.
- * Указатель на структуру \fIcells\fP с информацией
- * о сетке. Данная сетка обходится поклеточно и
- * находятся компоненты связности рекурентно.
+ * ocr_con_comp - function returns connected
+ * components count.
+ * Image grid \fIcells\fP
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает массив компонент связностей. В случае ошибки
- * входных данных возвращает NULL.
+ * RETURN VALUE
+ * Function returns connected components count,
+ * if it fails returns NULL.
  */
 ocr_con_comp *ocr_segm_get_component(ocr_cells_net *cells, int **labeled);
 
 
 /** 3
- * ocr_segm_analyze_comp - вычисление основных характеристик
- * компонет связности \fIcomp\fP таких как ширина высота.
+ * ocr_segm_analyze_comp - calculate connected component \fIcomp\fP
+ * params such as width or height.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция не возвращает значения.
+ * RETURN VALUE
+ * This function returns no value.
  */
 void ocr_segm_analyze_comp(ocr_con_comp *comp, int comp_count);
 
@@ -56,7 +48,7 @@ void ocr_segm_analyze_comp(ocr_con_comp *comp, int comp_count);
  * в каждой строке компоненты \fIcomponent\fp полученном на
  * сетке с шириной клетки \fIcell_width\fP на изображении \fIimg\fP.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * RETURN VALUE
  * Функция возвращает массив вещественных чисел, соответствующих
  * доле черных пикселей в строке компоненты \fIcomponent\fP.
  */
@@ -69,8 +61,8 @@ ocr_segm_stat_info *ocr_segm_lines_stat(ocr_img_info *img, ocr_con_comp *compone
  * характеристикам, проецируя компоненты на серое изображение
  * \fIimg\fP.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция не возвращает значения.
+ * RETURN VALUE
+ * This function returns no value.
  */
 void ocr_segm_classify_comp(ocr_con_comp *comp, ocr_img_info *img, int comp_count, int cell_width);
 
@@ -84,7 +76,7 @@ void ocr_segm_classify_comp(ocr_con_comp *comp, ocr_img_info *img, int comp_coun
  * является ли она фоном или нет оценивая через сигму
  * данной области сравнивая ее с \fIsigma_thrshld\fP.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * RETURN VALUE
  * Функция возвращает указатель на массив компонент
  * связности.
  */
@@ -100,7 +92,7 @@ ocr_con_comp *ocr_segm_get_comp_by_net(ocr_img_info *grey, ocr_img_info *bin, in
  * является ли она фоном или нет оценивая через сигму
  * данной области сравнивая ее с \fIsigma_thrshld\fP.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * RETURN VALUE
  * Функция возвращает указатель на массив компонент
  * связности.
  */
@@ -113,7 +105,7 @@ int ocr_segm_get_page_count(ocr_img_info *img);
  * всех черных пикселей по вертикали на \fIshift\fP
  * пикселей.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * RETURN VALUE
  * Функция возвращает указатель на структуру с информацией
  * об обработанном изображении или NULL в случае неудачи.
  */
@@ -126,7 +118,7 @@ ocr_img_info *ocr_segm_rls_vert(ocr_img_info *img, int shift);
  * всех черных пикселей по горизонтали на \fIshift\fP
  * пикселей.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * RETURN VALUE
  * Функция возвращает указатель на структуру с информацией
  * об обработанном изображении или NULL в случае неудачи.
  */
@@ -143,7 +135,7 @@ ocr_img_info *ocr_segm_rls_horizont(ocr_img_info *img, int shift);
  * соответственно. По серому изображению классифицируется
  * области по типам: текст, изображение, формула или шум.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
+ * RETURN VALUE
  * Функция возвращает указатель на массив компонент
  * связности.
  */

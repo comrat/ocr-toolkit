@@ -11,7 +11,7 @@
  * image \fIimg\fP to grayscale
  *
  * RETURN VALUE
- * Pointer to grayscale image.
+ * This function returns no value.
  */
 ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img);
 
@@ -22,7 +22,7 @@ ocr_img_info *ocr_preproc_color2grey(ocr_img_info *img);
  * Pointer to binarized image \fIimg\fP
  *
  * RETURN VALUE
- * Pointer to dilated image.
+ * This function returns no value.
  */
 void ocr_preproc_dilate(ocr_img_info *img);
 
@@ -33,7 +33,7 @@ void ocr_preproc_dilate(ocr_img_info *img);
  * Pointer to binarized image \fIimg\fP
  *
  * RETURN VALUE
- * Pointer to the image after errosion.
+ * This function returns no value.
  */
 void ocr_preproc_errosion(ocr_img_info *img);
 
