@@ -44,22 +44,19 @@ void ocr_segm_analyze_comp(ocr_con_comp *comp, int comp_count);
 
 
 /** 3
- * ocr_segm_lines_stat - функция вычисляет долю черных пикселей
- * в каждой строке компоненты \fIcomponent\fp полученном на
- * сетке с шириной клетки \fIcell_width\fP на изображении \fIimg\fP.
+ * ocr_segm_lines_stat - function calculate part of black pixels
+ * in each line of \fIcomponent\fp which was builded on net with
+ * cell width \fIcell_width\fP pixels on image \fIimg\fP.
  *
  * RETURN VALUE
- * Функция возвращает массив вещественных чисел, соответствующих
- * доле черных пикселей в строке компоненты \fIcomponent\fP.
+ * Array of float values with black pixel parts in each line.
  */
 ocr_segm_stat_info *ocr_segm_lines_stat(ocr_img_info *img, ocr_con_comp *component, int cell_width);
 
 
 /** 3
- * ocr_segm_get_net - функция классифицирует компоненты
- * связности \fIcomp\fP из \fIocr_comp_type\fP по статистическим
- * характеристикам, проецируя компоненты на серое изображение
- * \fIimg\fP.
+ * ocr_segm_get_net - this function classify the connected
+ * component \fIcomp\fP according statistics properties.
  *
  * RETURN VALUE
  * This function returns no value.
@@ -68,17 +65,15 @@ void ocr_segm_classify_comp(ocr_con_comp *comp, ocr_img_info *img, int comp_coun
 
 
 /** 3
- * ocr_segm_get_comp_by_net - функция возвращаеи массив
- * компонент связности, полученных с серого изображения
- * \fIimg\fP методом разбиения изображения на сетку из
- * квадратных изображений, составляющих \fIpercent\fP
- * процентов от изображения. Каждая клетка проверяется,
- * является ли она фоном или нет оценивая через сигму
- * данной области сравнивая ее с \fIsigma_thrshld\fP.
+ * ocr_segm_get_comp_by_net - function returns
+ * connected components from grayscale image
+ * \fIimg\fP is devided on cells count
+ * \fIcells_count\fP in each dimension
+ * and calculate sigma for each one and compare it with
+ * threshod \fIsigma_thrshld\fP.
  *
  * RETURN VALUE
- * Функция возвращает указатель на массив компонент
- * связности.
+ * Array of connected components.
  */
 ocr_con_comp *ocr_segm_get_comp_by_net(ocr_img_info *grey, ocr_img_info *bin, int cells_count, double sigma_thrshld);
 
