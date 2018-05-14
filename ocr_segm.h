@@ -79,60 +79,46 @@ ocr_con_comp *ocr_segm_get_comp_by_net(ocr_img_info *grey, ocr_img_info *bin, in
 
 
 /** 3
- * ocr_segm_get_comp_by_net - функция возвращаеи массив
- * компонент связности, полученных с серого изображения
- * \fIimg\fP методом разбиения изображения на сетку из
- * квадратных изображений, составляющих \fIpercent\fP
- * процентов от изображения. Каждая клетка проверяется,
- * является ли она фоном или нет оценивая через сигму
- * данной области сравнивая ее с \fIsigma_thrshld\fP.
+ * ocr_segm_get_page_count - function returns connected
+ * component count in image \fIimg\fP.
  *
  * RETURN VALUE
- * Функция возвращает указатель на массив компонент
- * связности.
+ * Connected component count.
  */
 int ocr_segm_get_page_count(ocr_img_info *img);
 
 
 /** 3
- * ocr_segm_get_rls_vert - функция обрабатывает входное
- * бинаризованное изображение \fIimg\fP, "размазыванием"
- * всех черных пикселей по вертикали на \fIshift\fP
- * пикселей.
+ * ocr_segm_rls_vert - function replace black pixels
+ * in \fIimg\fP image with \fIshift\fP length vertical
+ * line.
  *
  * RETURN VALUE
- * Функция возвращает указатель на структуру с информацией
- * об обработанном изображении или NULL в случае неудачи.
+ * Processed image info or NULL if it fails.
  */
 ocr_img_info *ocr_segm_rls_vert(ocr_img_info *img, int shift);
 
 
 /** 3
- * ocr_segm_get_rls_horizont - функция обрабатывает входное
- * бинаризованное изображение \fIimg\fP, "размазыванием"
- * всех черных пикселей по горизонтали на \fIshift\fP
- * пикселей.
+ * ocr_segm_rls_horizont - function replace black pixels
+ * in \fIimg\fP image with \fIshift\fP length horizontal
+ * line.
  *
  * RETURN VALUE
- * Функция возвращает указатель на структуру с информацией
- * об обработанном изображении или NULL в случае неудачи.
+ * Processed image info or NULL if it fails.
  */
 ocr_img_info *ocr_segm_rls_horizont(ocr_img_info *img, int shift);
 
 
 /** 3
- * ocr_segm_rlsa - сегментация текста методом RLSA (Run
- * Length Smoothing Algorithm). На вход подается серое
- * изображение \fIgrey\fP и бинаризованное \fIbin\fP.
- * Области определяются по пересечению черных областей
- * "размытых" по вертикали и горизонтали бинаризованных
- * изображений на \fIvert_shift\fP \fIhorizont_shift\fP
- * соответственно. По серому изображению классифицируется
- * области по типам: текст, изображение, формула или шум.
+ * ocr_segm_rlsa - RLSA (Run Length Smoothing Algorithm).
+ * based method for text segmentation. Input arguments are
+ * grayscale and binaried images \fIgrey\fP and \fIbin\fP.
+ * respectively. Result areas laid on vertical and
+ * horizontal blured lines intersection.
  *
  * RETURN VALUE
- * Функция возвращает указатель на массив компонент
- * связности.
+ * Array of result connected components or NULL if it fails.
  */
 ocr_con_comp *ocr_segm_rlsa(ocr_img_info *grey, ocr_img_info *bin, int vert_shift, int horizont_shift);
 
