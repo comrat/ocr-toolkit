@@ -6,7 +6,7 @@
 typedef struct{
 	double zones[5][5];
 	char symb;
-}zone_stat_char;
+} zone_stat_char;
 
 const zone_stat_char zones[STAT_SYMB_COUNT] = {
 	{	/* 1) a */
@@ -562,53 +562,41 @@ const zone_stat_char zones[STAT_SYMB_COUNT] = {
 };
 
 /** 3
- * ocr_recog_stat_lines_area - функция возвращает массив
- * структур с информацией о текстовой области сстрок из
- * фрагмента текста \fItext_area\fP. Число слов передается
- * через ссылка на переменную \fIline_count\fP. Области
- * строк опредляются через статистическую оценку доли
- * черных точек в строке. Данная функция корректно работает
- * на изображениях с ровным текстом! Наклонный под углом
- * текст может интерпретироваться неправильно.
+ * ocr_recog_stat_lines_area - function returns text area
+ * info array pointer to text lines and calculate its count
+ * in \fIline_count\fP pointer. This method isn't invariant
+ * for baseline angle it works correctly only for straight lines.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает массив структур с информацией о
- * текстовой области строк.
- * В случае неудачи функция возвращает \fINULL\fP.
+ * RETURN VALUE
+ * Function returns text area info array pointer to text lines
+ * and calculate its count and return it in \fIline_count\fP pointer.
+ * Returns \fINULL\fP if its failed.
  */
 ocr_text_area *ocr_recog_stat_lines_area(ocr_text_area *text_area, int *line_count);
 
 /** 3
- * ocr_recog_stat_words_area - функция возвращает массив
- * структур с информацией о текстовой области слов из
- * текстовой области строки \fIline_area\fP. Число слов
- * передается через ссылку на переменную \fIchar_count\fP.
- * Данная функция корректно работает на изображениях с
- * ровным текстом! Наклонный под углом текст может
- * интерпретироваться неправильно.
+ * ocr_recog_stat_words_area - function returns text area
+ * info array pointer to words area and calculate its count
+ * in \fIword_count\fP pointer. This method isn't invariant
+ * for baseline angle it works correctly only for straight lines.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает массив структур с информацией о
- * текстовой области слов, размерность массива передается
- * через входную переменную \fIchar_count\fP.
- * В случае неудачи функция возвращает \fINULL\fP.
+ * RETURN VALUE
+ * Function returns text area info array pointer to words
+ * and calculate its count and return it in \fIword_count\fP pointer.
+ * Returns \fINULL\fP if its failed.
  */
 ocr_text_area *ocr_recog_stat_words_area(ocr_text_area *line_area, int *word_count);
 
 /** 3
- * ocr_recog_stat_chars_area - функция возвращает массив
- * структур с информацией о текстовой области символов.
- * На вход подается текстовая область слова \fIword_area\fP
- * и ссылка на переменную \fIchar_count\fPдля хранения там
- * числа символов в введенном слове. Данная функция корректно
- * работает на изображениях с ровным текстом! Наклонный под
- * углом текст может интерпретироваться неправильно.
+ * ocr_recog_stat_chars_area - function returns text area
+ * info array pointer to chars area and calculate its count
+ * in \fIchar_count\fP pointer. This method isn't invariant
+ * for baseline angle it works correctly only for straight lines.
  *
- * ВОЗВРАЩАЕМОЕ ЗНАЧЕНИЕ
- * Функция возвращает массив структур с информацией о
- * текстовой области, размерность массива передается через
- * входную переменную \fIchar_count\fP.
- * В случае неудачи функция возвращает \fINULL\fP.
+ * RETURN VALUE
+ * Function returns text area info array pointer to words
+ * and calculate its count and return it in \fIchar_count\fP pointer.
+ * Returns \fINULL\fP if its failed.
  */
 ocr_text_area *ocr_recog_stat_chars_area(ocr_text_area *word_area, int *char_count);
 
