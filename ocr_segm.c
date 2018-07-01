@@ -5,20 +5,19 @@
 
 #include <stdio.h>
 
-/************************ Реализация ****************************/
 
 void ocr_segm_page_vert_divisor(ocr_img_info *img, int *div_be, int *div_end)
 {
-	if(img->bytes_for_pix != 1)
+	if (img->bytes_for_pix != 1)
 		return;
 
 	int i = 0, j = 0, k = 0;
-	int curr = 0;			// индекс рассматриваемого пикселя
+	int curr = 0;			// current index pixel
 	int width = img->width;
 	int height = img->height;
 	int stride = img->stride;
-	int middle_be = (width >> 1) - (width >> 3);	// индекс начала диапазона середины
-	int middle_en = (width >> 1) + (width >> 3);	// индекс конца диапазона середины
+	int middle_be = (width >> 1) - (width >> 3);	// middle delimeter area start index
+	int middle_en = (width >> 1) + (width >> 3);	// middle delimeter area end index
 	int window_width = 10;
 	int be = -1;
 	int end = -1;
@@ -26,67 +25,63 @@ void ocr_segm_page_vert_divisor(ocr_img_info *img, int *div_be, int *div_end)
 	double stat = 0.0;
 	double prev_stat = 2.0;
 
-	/* Ставим возвращаемые значения по умолчанию. */
+	/* Reset return values. */
 	*div_end = -1;
 	*div_be = -1;
-	/* Пробегаем скользящим окном толщиной в 10 пикселей. */
-	for(i = 0; i < width - window_width; i++){
+
+	/* Apply 10pixels slide window. */
+	for (i = 0; i < width - window_width; i++) {
 		stat = 0;
-		for(j = 0; j < height; j++){
+		for (j = 0; j < height; j++) {
 			curr = j * stride + i;
-			for(k = 0; k < window_width; k++){
+			for (k = 0; k < window_width; k++) {
 				stat += pix[curr + k];
 			}
 		}
-		/* Оцениваем отношение черных пикселей ко всем. */
+		/* Get black pixels count. */
 		stat /= CR_BLACK * height * window_width;
-		/* Находим индекс столбца, откуда начинается разделитель
-		страницы (если он есть). */
-		if(stat > 0.6 && i > middle_be && i < middle_en){
-			/* Делитель изображения находится примерно посередине. */
+
+		/* Check current index is it page delimeter. */
+		if (stat > 0.6 && i > middle_be && i < middle_en) {
 			be = i;
 			break;
 		}
 	}
-	if(be == -1)
+
+	if (be == -1)
 		return;
 
 	*div_be = be;
-	/* Определяем диапазон разделителя страницы. */
-	/* Находим начало диапазона. */
-	for(i = be; i >= middle_be; i--){
+
+	/* Figuring out page delimeter width. */
+	for (i = be; i >= middle_be; i--){
 		stat = 0;
-		for(j = 0; j < height; j++){
+		for (j = 0; j < height; j++){
 			curr = j * stride + i;
 			stat += pix[curr];
 		}
-		/* Оцениваем отношение черных пикселей ко всем. */
 		stat /= CR_BLACK * height;
-		if(stat < 0.1){
+		if (stat < 0.1) {
 			*div_be = i;
 			break;
 		}
 	}
 
-	/* Находим конец диапазона. */
-	for(i = be; i < middle_en; i++){
+	/* Find delimeter area end. */
+	for (i = be; i < middle_en; i++) {
 		stat = 0;
-		for(j = 0; j < height; j++){
+		for (j = 0; j < height; j++) {
 			curr = j * stride + i;
 			stat += pix[curr];
 		}
-		/* Оцениваем отношение черных пикселей ко всем. */
 		stat /= CR_BLACK * height;
-		if(stat < 0.1){
+		if (stat < 0.1) {
 			*div_end = i;
 			break;
 		}
 	}
 }
 
-/***3
- * для бинаризованных изображений
-*/
 void ocr_segm_get_area(ocr_img_info *img, coord *begin, coord *end){
 	int i = 0, j = 0;
 	int curr = 0;
@@ -94,10 +89,10 @@ void ocr_segm_get_area(ocr_img_info *img, coord *begin, coord *end){
 	int height = img->height;
 	int stride = img->stride;
 	int space_begin = -1;
-	int w_quart = width >> 2;	// четверть ширины
-	int h_quart = height >> 2;	// четверть высоты
-	int w_quart_r = width - w_quart;	// отступ на четверть ширины справа
-	int h_quart_b = height - h_quart;	// отступ на четверть ширины снизу
+	int w_quart = width >> 2;
+	int h_quart = height >> 2;
+	int w_quart_r = width - w_quart;
+	int h_quart_b = height - h_quart;
 	uchar *pix = img->pix;
 	double stat = 0.0;
 	double small_mu = 0.025;
@@ -107,80 +102,71 @@ void ocr_segm_get_area(ocr_img_info *img, coord *begin, coord *end){
 	end->x = width - 1;
 	end->y = height - 1;
 
-
-	/* Ищем левую границу области в первой четверти. */
-	for(i = 1; i < w_quart; i++){
+	/* Find left border of the first qurter. */
+	for (i = 1; i < w_quart; i++) {
 		stat = 0.0;
-		for(j = 0; j < height; j++){
+		for (j = 0; j < height; j++) {
 			curr = stride * j + i;
 			stat += pix[curr];
 		}
 		stat /= CR_BLACK * height;
-		/* Попадаем в информативную область. */
-		if(stat > big_mu && space_begin != -1){
+		if (stat > big_mu && space_begin != -1) {
 			begin->x = i - 1;
 			break;
 		}
-		/* Находим начало "бeлой" рамки. */
-		if(stat < small_mu && space_begin == -1){
+		if (stat < small_mu && space_begin == -1) {
 			space_begin = i;
 		}
 	}
-	/* Сбрасыванием переменную входу в область рамки. */
+	/* Find tight border. */
 	space_begin = -1;
-	/* Ищем правую границу. */
-	for(i = width - 2; i >= w_quart_r; i--){
+	// TODO: rempve code duplication
+	for (i = width - 2; i >= w_quart_r; i--){
 		stat = 0.0;
-		for(j = 0; j < height; j++){
+		for (j = 0; j < height; j++){
 			curr = stride * j + i;
 			stat += pix[curr];
 		}
 		stat /= CR_BLACK * height;
-		/* Попадаем в информативную область. */
-		if(stat > big_mu && space_begin != -1){
+		if (stat > big_mu && space_begin != -1){
 			end->x = i + 1;
 			break;
 		}
-		/* Находим начало "белой" рамки. */
-		if(stat < small_mu && space_begin == -1){
+		if (stat < small_mu && space_begin == -1){
 			space_begin = i;
 		}
 	}
+	/* Find upper bound. */
 	space_begin = -1;
-	/* Ищем верхнюю границу. */
-	for(i = 1; i < h_quart; i++){
+	for (i = 1; i < h_quart; i++) {
 		stat = 0.0;
-		for(j = 0; j < width; j++){
+		for (j = 0; j < width; j++) {
 			curr = stride * i + j;
 			stat += pix[curr];
 		}
 		stat /= CR_BLACK * width;
-		/* Попадаем в информативную область. */
-		if(stat > big_mu && space_begin != -1){
+		if (stat > big_mu && space_begin != -1) {
 			begin->y = i - 1;
 			break;
 		}
-		/* Находим начало "белой" рамки. */
-		if(stat < 2 * small_mu && space_begin == -1){
+		if (stat < 2 * small_mu && space_begin == -1) {
 			space_begin = i;
 		}
 	}
+	/* Find lower bound. */
 	space_begin = -1;
-	/* Ищем нижнюю границу. */
-	for(i = height - 2; i > h_quart_b; i--){
+	for (i = height - 2; i > h_quart_b; i--) {
 		stat = 0.0;
-		for(j = 0; j < width; j++){
+		for (j = 0; j < width; j++) {
 			curr = stride * i + j;
 			stat += pix[curr];
 		}
 		stat /= CR_BLACK * width;
-		/* Попадаем в информативную область. */
-		if(stat > big_mu && space_begin != -1){
+		if (stat > big_mu && space_begin != -1) {
 			end->y = i + 1;
 			break;
 		}
-		/* Находим начало "белой" рамки. */
-		if(stat < 2 * small_mu && space_begin == -1){
+		if (stat < 2 * small_mu && space_begin == -1) {
 			space_begin = i;
 		}
 	}

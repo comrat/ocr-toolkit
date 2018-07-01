@@ -55,7 +55,7 @@ ocr_segm_stat_info *ocr_segm_lines_stat(ocr_img_info *img, ocr_con_comp *compone
 
 
 /** 3
- * ocr_segm_get_net - this function classify the connected
+ * ocr_segm_classify_comp - this function classify the connected
  * component \fIcomp\fP according statistics properties.
  *
  * RETURN VALUE
