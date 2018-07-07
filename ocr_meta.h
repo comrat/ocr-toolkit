@@ -95,4 +95,13 @@ typedef struct
 	uchar position;	// 0 if value is below threshod 255 otherwise
 } ocr_hist_interval;
 
+
+ocr_img_info *ocr_img_info_malloc(int width, int height, char type);
+
+void ocr_img_info_free(ocr_img_info *img);
+
+ocr_text_area *ocr_text_area_malloc(int width, int height, int x, int y);
+
+void ocr_text_area_array_free(ocr_text_area **area, int elem_count);
+
 #endif	/* __OCR_META__ */
