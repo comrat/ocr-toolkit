@@ -96,12 +96,42 @@ typedef struct
 } ocr_hist_interval;
 
 
+/** 3
+ * ocr_img_info_malloc - allocate memory for image with
+ * \fIwidth\fPx\fIheight\fP size.
+ *
+ * RETURN VALUE
+ * Pointer to allocated structure.
+ */
 ocr_img_info *ocr_img_info_malloc(int width, int height, char type);
 
+
+/** 3
+ * ocr_img_info_free - free image info structore \fIimg\fP
+ *
+ * RETURN VALUE
+ * This function returns no value.
+ */
 void ocr_img_info_free(ocr_img_info *img);
 
+
+/** 3
+ * ocr_text_area_malloc - allocate memory for text area with
+ * \fIwidth\fPx\fIheight\fP size at \fIx\fP, \fIy\fP point.
+ *
+ * RETURN VALUE
+ * Pointer to allocated structure.
+ */
 ocr_text_area *ocr_text_area_malloc(int width, int height, int x, int y);
 
+
+/** 3
+ * ocr_text_area_array_free - free text area info array \farea\fP
+ * with size \felem_count\fP
+ *
+ * RETURN VALUE
+ * This function returns no value.
+ */
 void ocr_text_area_array_free(ocr_text_area **area, int elem_count);
 
 #endif	/* __OCR_META__ */

@@ -14,11 +14,10 @@ ocr_img_info *ocr_img_info_malloc(int width, int height, char type)
 		return NULL;
 	}
 
-	/* определяем размер пикселя, по
-	умолчанию 1байт (для серого). */
-	switch(type){
+	/* Get pixel size, use 1 Byte as default (for graysclae images).*/
+	switch (type) {
 	case BIN:
-		pix_size = GREY;	/* Для хранения бинаризованного тоже нужен 1 байт. */
+		pix_size = GREY;	/* Binirized is 1 byte size like a grayscale one. */
 	case RGB:
 		pix_size = RGB;
 		break;
@@ -36,7 +35,6 @@ ocr_img_info *ocr_img_info_malloc(int width, int height, char type)
 
 	result = (ocr_img_info *)malloc(sizeof(ocr_img_info));
 	if (result == NULL) {
-
 		return NULL;
 	}
 	result->pix = (uchar *)malloc(size);
@@ -53,25 +51,22 @@ ocr_img_info *ocr_img_info_malloc(int width, int height, char type)
 	return result;
 }
 
-/* Удаляем структуру. */
 void ocr_img_info_free(ocr_img_info *img)
 {
-	free(img->pix);	/* Удаляем пиксели. */
+	free(img->pix);
 	free(img);
 }
 
-/* Удаляем массив указателей структур. */
 void ocr_img_info_array_free(ocr_img_info **img, int elem_count)
 {
 	int i = 0;
 	for (i = 0; i < elem_count; i++) {
-		free(img[i]->pix);	/* Удаляем пиксели. */
-		free(img[i]);		/* Удаляем элемент из массива. */
+		free(img[i]->pix);
+		free(img[i]);
 	}
 	free(img);
 }
 
-/************************** Для ocr_text_area *******************************/
 ocr_text_area *ocr_text_area_malloc(int width, int height, int x, int y)
 {
 	int size = 0;
@@ -106,20 +101,18 @@ ocr_text_area *ocr_text_area_malloc(int width, int height, int x, int y)
 	return result;
 }
 
-/* Удаляем структуру. */
 void ocr_text_area_free(ocr_text_area *area)
 {
-	free(area->pix);	/* Удаляем пиксели. */
+	free(area->pix);
 	free(area);
 }
 
-/* Удаляем массив указателей структур. */
 void ocr_text_area_array_free(ocr_text_area **area, int elem_count)
 {
 	int i = 0;
 	for (i = 0; i < elem_count; i++) {
-		free(area[i]->pix);	/* Удаляем пиксели. */
-		free(area[i]);		/* Удаляем элемент из массива. */
+		free(area[i]->pix);
+		free(area[i]);
 	}
 	free(area);
 }
