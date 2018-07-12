@@ -1,9 +1,8 @@
-#include "ocr_meta.h"
-#include "ocr_segm.h"
 #include <stdlib.h>
 #include <math.h>
-
 #include <stdio.h>
+
+#include "ocr_segm.h"
 
 
 void ocr_segm_page_vert_divisor(ocr_img_info *img, int *div_be, int *div_end)
@@ -292,13 +291,13 @@ ocr_con_comp *ocr_segm_get_component(ocr_cells_net *cells, int **labeled)
 	ocr_con_comp tmp_com;
 	coord tmp_coord;
 
-	for(i = 0; i < height; i++){
-		for(j = 0; j < width; j++){
-			if(labeled[i][j] == 0){
+	for (i = 0; i < height; ++i) {
+		for (j = 0; j < width; ++j) {
+			if (labeled[i][j] == 0) {
 				continue;
 			}
 			/* Add new component. */
-			if(labeled[i][j] > curr_label){
+			if (labeled[i][j] > curr_label) {
 				tmp_com.width = 0;
 				tmp_com.height = 0;
 				tmp_com.center.x = 0;
@@ -310,8 +309,6 @@ ocr_con_comp *ocr_segm_get_component(ocr_cells_net *cells, int **labeled)
 				com_coords = (coord *)malloc(sizeof(coord));
 				com_coords[0] = tmp_coord;
 				tmp_com.coords = com_coords;
-				//tmp_com.position.x = j;
-				//tmp_com.position.y = i;
 				/* Initialile area rectangle info. */
 				tmp_com.up_left.x = 0;
 				tmp_com.up_left.y = 0;
@@ -319,11 +316,10 @@ ocr_con_comp *ocr_segm_get_component(ocr_cells_net *cells, int **labeled)
 				tmp_com.bot_right.y = 0;
 				/* Set "NOISE: type as default. */
 				tmp_com.type = NOISE;
-
 				curr_label++;
 				component = (ocr_con_comp *)realloc(component, sizeof(ocr_con_comp) * curr_label);
 				component[curr_label - 1] = tmp_com;
-			}else{
+			} else {
 				curr_ind = labeled[i][j] - 1;
 				/* Set coord-s of next component. */
 				tmp_coord.x = j;

@@ -122,4 +122,5 @@ ocr_img_info *ocr_segm_rls_horizont(ocr_img_info *img, int shift);
  */
 ocr_con_comp *ocr_segm_rlsa(ocr_img_info *grey, ocr_img_info *bin, int vert_shift, int horizont_shift);
 
+
 #endif /* __OCR_SEGM__ */
