@@ -61,7 +61,7 @@ ocr_segm_stat_info *ocr_segm_lines_stat(ocr_img_info *img, ocr_con_comp *compone
  * RETURN VALUE
  * This function returns no value.
  */
-void ocr_segm_classify_comp(ocr_con_comp *comp, ocr_img_info *img, int comp_count, int cell_width);
+void ocr_segm_classify_comp(ocr_con_comp *comp, ocr_img_info *img, ocr_cells_net *net, int comp_count, int cell_width);
 
 
 /** 3
