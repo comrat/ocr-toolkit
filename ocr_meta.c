@@ -88,7 +88,7 @@ ocr_text_area *ocr_text_area_malloc(int width, int height, int x, int y)
 	if (result == NULL) {
 		return NULL;
 	}
-	result->pix = (uchar *)malloc(size);
+	result->pix = (uchar **)malloc(size);
 	if (result->pix == NULL) {
 		free(result);
 		return NULL;

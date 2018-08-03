@@ -192,7 +192,7 @@ ocr_cells_net *ocr_segm_get_net(ocr_img_info *grey, int cells_count, double sigm
 	double sigma = 0;			// statistics sigma square root of the dispersion
 	double mu = 0;				// average value
 	uchar is_on_divisor = 0;	// equal '0' if it is on page separator and '255' otherwise
-	uchar **output = (char **)malloc(sizeof(char *) * y_seg_count);
+	uchar **output = (uchar **)malloc(sizeof(char *) * y_seg_count);
 	ocr_cells_net *result = (ocr_cells_net *)malloc(sizeof(ocr_cells_net));
 	uchar *pix = grey->pix;
 	coord begin, end;
@@ -784,7 +784,7 @@ ocr_cells_net *ocr_segm_and_classification(ocr_img_info *grey, int cells_count, 
 	double sigma = 0;			// statistics sigma square root of the dispersion
 	double mu = 0;				// average value
 	uchar is_on_divisor = 0;	// equal '0' if it is on page separator and '255' otherwise
-	uchar **output = (char **)malloc(sizeof(char *) * y_seg_count);
+	uchar **output = (uchar **)malloc(sizeof(char *) * y_seg_count);
 	ocr_cells_net *result = (ocr_cells_net *)malloc(sizeof(ocr_cells_net));
 	uchar *pix = grey->pix;
 	coord begin, end;
