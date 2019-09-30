@@ -1,4 +1,3 @@
-/* Заголовочные файлы для распознования текста. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -6,36 +5,33 @@
 #include <string.h>
 #include <glib.h>
 #include <unistd.h>
-/* Для загрузки изображений и ренедринга текста. */
+#include <getopt.h>
+
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <cairo/cairo.h>
 #include <cairo/cairo-pdf.h>
-/* Для флагов. */
-#include <getopt.h>
 
 #include "ocr_preproc.h"
 
-/* Функция сравнения строк для быстрой сортировки. */
 static int compare(const void *p1, const void *p2)
-{
-	return strcmp(*(char *const *)p1, *(char *const *)p2);
-}
+{ return strcmp(*(char *const *)p1, *(char *const *)p2); }
 
 int main(int argc, char **argv)
 {
 	GdkPixbuf *pbuf;
 	GError *gerror;
-	/* Cairo var-s. */
 	cairo_t *cr;
 	cairo_surface_t *dst, *src;
 	cairo_format_t format;
 
-	int i = 0, j = 0, k = 0;
+	int i = 0;
+	int j = 0;
+	int k = 0;
+	int opt;
 	int open_dir = -1;
-	int cells_on_side = 10;		// число клеток разбиения по горизонтали изображения
-	int f_count = 0;		// число файлов в директории.
-	int opt;			// переменная для хранения входных флагов
-	int w = 1, h = 1;		// ширина и высота
+	int cells_on_side = 10;		// horisontal cells count
+	int f_count = 0;			// files in dir count
+	int w = 1, h = 1;			// width and height
 	int stride = 0, rowpix = 0;
 
 	char *cat_name;
@@ -56,9 +52,8 @@ int main(int argc, char **argv)
 	gchar *fname;
 	gerror = NULL;
 
-	/* Проверка входныз флагов. */
-	while((opt = getopt(argc, argv, "df:gost:")) != -1){
-		switch(opt){
+	while ((opt = getopt(argc, argv, "df:gost:")) != -1) {
+		switch (opt) {
 		case 'd':
 			use_dilate = true;
 			break;
@@ -81,70 +76,60 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/**** Получение списка файлов. ****/
-	/* Проверка входных данных. */
-	if(argc <= 1){
+	if (argc <= 1) {
 		printf("Please enter directory name.\n ");
 		exit(1);
 	}
 
-	if(gerror != NULL){
+	if (gerror != NULL) {
 		printf("Could't open catalog.\n");
 		exit(1);
 	}
 
 	open_dir = (int)g_chdir(cat_name);
 
-	if(open_dir == -1){
+	if (open_dir == -1) {
 		printf("Couldn't open catalog.\n");
 		exit(1);
 	}
 
-	/* Считываем список файлов. */
-	while((fname = (char *)g_dir_read_name(cat)) != NULL){
-		/* Если счетчик файлов превысил 1000, выделяем доп. память. */
-		if(f_count > 1000)
+	/* Read file list from directory */
+	while ((fname = (char *)g_dir_read_name(cat)) != NULL) {
+		/* Reallocate memory for more than 1000 files */
+		if (f_count > 1000)
 			file_list = (char **)realloc(file_list, f_count);
 		file_list[f_count] = malloc(sizeof(char) * strlen(fname));
 		memcpy(file_list[f_count], fname, strlen(fname));
-		f_count++;
+		++f_count;
 	}
 
-	/* Сортируем файлы в директории в лексиграф. порядке.*/
+	/* Sort files */
 	qsort(file_list, f_count, sizeof(char *), compare);
 
-	/**** Обработка каждого файла. ****/
-	/* Создаем поверхность для выходного PDF-файла. */
+	/* Create surface for output pdf file: 'result.pdf' */
 	dst = cairo_pdf_surface_create("result.pdf", w, h);
 	cr = cairo_create(dst);
-
-	/* Проверка успешности создания выходного файла. */
-	if(cr == NULL){
+	if (cr == NULL) {
 		printf("Couldn't create \"result.pdf\"");
 		exit(1);
 	}
 
-	for(k = 0; k < f_count; k++){
-		/**** Получение изображение ****/
+	for (k = 0; k < f_count; ++k) {
 		printf("Processing file %s:\n", file_list[k]);
 		g_type_init();
 		gerror = NULL;
 
-		/* Получаем указатель на пиксели. */
 		pbuf = gdk_pixbuf_new_from_file(file_list[k], &gerror);
-
-		if(pbuf == NULL){
+		if (pbuf == NULL) {
 			printf("Couldn't open file %s\n", file_list[k]);
 			continue;
 		}
 
-		if(gerror != NULL){
+		if (gerror != NULL) {
 			printf("Failed to open file %s:%s\n", file_list[k], gerror->message);
 			continue;
 		}
 
-		/* Запоминаем ширину и высоту изображения и
-		изменяем размер */
 		w = gdk_pixbuf_get_width(pbuf);
 		h = gdk_pixbuf_get_height(pbuf);
 
@@ -152,24 +137,21 @@ int main(int argc, char **argv)
 		pix = gdk_pixbuf_get_pixels(pbuf);
 		stride = gdk_pixbuf_get_rowstride(pbuf);
 
-		/* Определяем есть ли альфа канал в изображении. */
-		if(gdk_pixbuf_get_has_alpha(pbuf))
-			rowpix = 4;	// для альфа канала
-		else
-			rowpix = 3;	// для RGB
+		/* Check alpha channel and use 4 bytes per pixel then */
+		rowpix = gdk_pixbuf_get_has_alpha(pbuf) ? 4 : 3
 
-		/* Заполняем поля информацией об изображении. */
+		/* Fill image info structure */
 		img->width = w;
 		img->height = h;
 		img->pix = pix;
 		img->stride = stride;
 		img->bytes_for_pix = rowpix;
 
-		/**** Бинаризация ****/
+		/**** Binarization ****/
 		grey = ocr_imgproc_color2grey(img);
 		ocr_imgproc_invert(grey);
 
-		if(grey == NULL){
+		if (grey == NULL) {
 			printf("Converting to grey error.");
 			continue;
 		}
@@ -177,35 +159,25 @@ int main(int argc, char **argv)
 		format = CAIRO_FORMAT_A8;
 		stride = cairo_format_stride_for_width(format, w);
 
-		/* Применяем яильтр Гаусса, если стоит соответствующий флаг. */
-		if(use_gauss)
+		/* Apply Gauss filter for corresponded flag */
+		if (use_gauss)
 			ocr_imgproc_filter_gauss(grey);
 
-		//TODO переделать этот фильтр
-		//ocr_imgproc_filter_median(grey, 10);
+		/* Apply Otsu binarization */
+		bin = ocr_imgproc_threshold_otsu(grey, cells_on_side);
 
-		bin = ocr_imgproc_threshold_otsu(grey, cells_on_side);	// бинаризуем
-
-		/* Применяем дилатацию при необходимости. */
-		if(use_dilate)
+		/* Apply delate transform if necessary */
+		if (use_dilate)
 			ocr_imgproc_dilate(bin);
 
-		if(bin == NULL){
+		if (bin == NULL) {
 			printf("Binarization error.");
 			continue;
 		}
 
-		/**** Сегментация ****/
-		ocr_segm_get_comp_by_net(grey, bin, 125, 3);
-
-
-
-
-		/**** Распознание ****/
-		/**** Рендеринг текста ****/
-		/* Сохранение страницы. */
+		/* Save the page */
 		src = cairo_image_surface_create_for_data(bin->pix, format, w, h, stride);
-		if(src == NULL){
+		if (src == NULL) {
 			printf("Couldn't create surface for data.\n");
 			continue;
 		}
@@ -219,8 +191,6 @@ int main(int argc, char **argv)
 	}
 	cairo_surface_destroy(dst);
 	cairo_destroy(cr);
-
-	/**** Сохранение картинки в файл. ****/
 
 	return 0;
 }
