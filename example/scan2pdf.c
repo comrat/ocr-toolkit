@@ -1,7 +1,3 @@
-#include "ocr_imgproc.h"
-#include "ocr_segm.h"
-#include "ocr_recog.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -14,6 +10,8 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <cairo/cairo.h>
 #include <cairo/cairo-pdf.h>
+
+#include "ocr_preproc.h"
 
 static int compare(const void *p1, const void *p2)
 { return strcmp(*(char *const *)p1, *(char *const *)p2); }
