@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 		stride = gdk_pixbuf_get_rowstride(pbuf);
 
 		/* Check alpha channel and use 4 bytes per pixel then */
-		rowpix = gdk_pixbuf_get_has_alpha(pbuf) ? 4 : 3
+		rowpix = gdk_pixbuf_get_has_alpha(pbuf) ? 4 : 3;
 
 		/* Fill image info structure */
 		img->width = w;
