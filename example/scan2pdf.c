@@ -148,8 +148,8 @@ int main(int argc, char **argv)
 		img->bytes_for_pix = rowpix;
 
 		/**** Binarization ****/
-		grey = ocr_imgproc_color2grey(img);
-		ocr_imgproc_invert(grey);
+		grey = ocr_preproc_color2grey(img);
+		ocr_preproc_invert(grey);
 
 		if (grey == NULL) {
 			printf("Converting to grey error.");
@@ -161,14 +161,14 @@ int main(int argc, char **argv)
 
 		/* Apply Gauss filter for corresponded flag */
 		if (use_gauss)
-			ocr_imgproc_filter_gauss(grey);
+			ocr_preproc_filter_gauss(grey);
 
 		/* Apply Otsu binarization */
-		bin = ocr_imgproc_threshold_otsu(grey, cells_on_side);
+		bin = ocr_preproc_threshold_otsu(grey, cells_on_side);
 
 		/* Apply delate transform if necessary */
 		if (use_dilate)
-			ocr_imgproc_dilate(bin);
+			ocr_preproc_dilate(bin);
 
 		if (bin == NULL) {
 			printf("Binarization error.");
