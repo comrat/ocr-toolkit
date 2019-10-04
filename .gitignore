@@ -3,4 +3,5 @@
 *.swn
 *.swp
 *.swo
+scan2pdf
 libocrtoolkit.*.so
