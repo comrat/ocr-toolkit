@@ -14,5 +14,5 @@ For every step separate library respectively was written:
 * ocr_recog
 * ocr_correct
 
-# Install
-Just run `make` to build o-files
+# Build Example
+There is `scan2pdf` usage example in `example` folder. To build it run `make` command there.
