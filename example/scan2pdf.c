@@ -28,13 +28,11 @@ int main(int argc, char **argv)
 	int j = 0;
 	int k = 0;
 	int opt;
-	int open_dir = -1;
 	int cells_on_side = 10;		// horisontal cells count
 	int f_count = 0;			// files in dir count
 	int w = 1, h = 1;			// width and height
 	int stride = 0, rowpix = 0;
 
-	char *cat_name;
 	char **file_list = (char **)malloc(sizeof(char *) * 1000);
 
 	uchar *pix;
@@ -58,8 +56,7 @@ int main(int argc, char **argv)
 			use_dilate = true;
 			break;
 		case 'f':
-			cat = g_dir_open(optarg, 0, gerror);
-			cat_name = optarg;
+			cat = g_dir_open(optarg, 0, &gerror);
 			break;
 		case 'g':
 			use_gauss = true;
@@ -86,13 +83,6 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	open_dir = (int)g_chdir(cat_name);
-
-	if (open_dir == -1) {
-		printf("Couldn't open catalog.\n");
-		exit(1);
-	}
-
 	/* Read file list from directory */
 	while ((fname = (char *)g_dir_read_name(cat)) != NULL) {
 		/* Reallocate memory for more than 1000 files */
@@ -116,7 +106,9 @@ int main(int argc, char **argv)
 
 	for (k = 0; k < f_count; ++k) {
 		printf("Processing file %s:\n", file_list[k]);
+#ifndef GLIB_VERSION_2_36
 		g_type_init();
+#endif
 		gerror = NULL;
 
 		pbuf = gdk_pixbuf_new_from_file(file_list[k], &gerror);
