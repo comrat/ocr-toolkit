@@ -12,20 +12,23 @@ ocr_text_area *ocr_recog_get_word_area(ocr_text_area *t_area)
 
 ocr_text_area *ocr_recog_stat_chars_area(ocr_text_area *word_area, int *char_count)
 {
-	if(word_area->height <= 0)
+	if (word_area->height <= 0)
 		return NULL;
 
-	int width = word_area->width;		// ширина текстовой области
-	int height = word_area->height;		// высота текстовой области
-	int i = 0, j = 0, k = 0, l = 0;		// индексы
-	int shift = (int)(height * 0.05);	// будем считать длину разделителя за 1/20 высоты
-	//int mid_shift = shift >> 1;	// середина шага
-	int char_be = 0, char_end = 0;	// индексы начала и конца символа в слове
-	int char_width = 0;		// ширина символа
-	int start_ind = 0;		// индекс, откуда начинаются символы
-	int char_height = 0;		// высота текущего символа
-	int up_border = 0;		// индекс строки с которой начинается символ
-	double mu = 0.0;		// доля черных пикселей в столбце
+	int width = word_area->width;
+	int height = word_area->height;
+	int i = 0;
+	int j = 0;
+	int k = 0;
+	int l = 0;
+	int shift = (int)(height * 0.05);	// step will be 1/20 of the height
+	int char_be = 0;		// char start index
+	int char_end = 0;		// char end index
+	int char_width = 0;		// char width
+	int char_height = 0;	// char height
+	int start_ind = 0;		// chars line start index
+	int up_border = 0;		// char upper border
+	double mu = 0.0;		// part of black pixels
 	double mu_height = 0.0;		// доля черных пикселей в строке
 	double thrshld = 0.005;		// пороовое значение доли черных пикселей
 	uchar state = 0;		// переменная указывает на текущее состояние 0 - елси символ,
@@ -38,23 +41,23 @@ ocr_text_area *ocr_recog_stat_chars_area(ocr_text_area *word_area, int *char_cou
 	(*char_count) = 0;
 
 	/* Находим начало инжекс, с которого начинаются символы. */
-	for(i = 0; i < width; i++){
+	for (i = 0; i < width; ++i) {
 		mu = 0.0;
-		for(j = 0; j < height; j++){
+		for (j = 0; j < height; ++j) {
 			mu += pix[j][i];
 		}
 		mu /= CR_BLACK * height;
-		if(mu > thrshld){
+		if (mu > thrshld) {
 			start_ind = i;
 			break;
 		}
 	}
 	char_be = start_ind;	// запоминаем индекс
-	for(i = start_ind; i < width - shift; i++){
+	for (i = start_ind; i < width - shift; ++i) {
 		/* Вычисляем долю черных пикселей в столбце пикселей. */
 		mu = 0.0;
-		for(j = 0; j < height; j++){
-			for(k = 0; k < shift; k++){
+		for (j = 0; j < height; j++) {
+			for (k = 0; k < shift; k++) {
 				mu += pix[j][i + k];
 			}
 		}
@@ -62,7 +65,7 @@ ocr_text_area *ocr_recog_stat_chars_area(ocr_text_area *word_area, int *char_cou
 
 		if((mu < thrshld && state == 0) || i == width - shift - 1){	// если переходим в режим разделителя после символа
 			state = 255;		// меняем на режим разделителя
-			char_end = i;//(i + mid_shift < width) ? i + mid_shift: width - 1;	// индекс конца символа
+			char_end = i;
 			char_width = char_end - char_be;	// определяем ширину символа
 			/* Если ширина положительна, то создадим новый символ. */
 			if(char_width > 0){
@@ -115,7 +118,6 @@ ocr_text_area *ocr_recog_stat_chars_area(ocr_text_area *word_area, int *char_cou
 			}
 		}else if(mu > thrshld && state == 255){
 			state = 0;			// меняем на режим символа
-			//char_be = i - mid_shift;	// запоминаем индекс начала символа
 			char_be = i + shift;
 		}
 	}
