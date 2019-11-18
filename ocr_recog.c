@@ -128,73 +128,76 @@ ocr_text_area *ocr_recog_stat_words_area(ocr_text_area *line_area, int *word_cou
 	if(line_area->height <= 0)
 		return NULL;
 
-	int width = line_area->width;		// ширина текстовой области
-	int height = line_area->height;		// высота текстовой области
-	int i = 0, j = 0, k = 0, l = 0;		// индексы
-	int shift = (int)(height * 0.18);	// будем считать длину разделителя за четверть высоты
-	int mid_shift = shift >> 1;	// середина шага
-	int word_be = 0, word_end = 0;	// индексы начала и конца слова в строке
-	int word_width = 0;		// ширина слова
-	int start_ind = 0;		// индекс, откуда начинаются слова
-	double mu = 0.0;		// доля черных пикселей в столбце
-	double thrshld = 0.0005;		// пороовое значение доли черных пикселей
-	uchar state = 0;		// переменная указывает на текущее состояние 0 - елси слово,
-					// 255 - если разделитель.
-	uchar **pix = line_area->pix;	// 2-мерный массив пикселей текстовой области
-	ocr_text_area *words = NULL;	// рещультирующий массив текстовых областей слов
-	ocr_text_area add_area;		// добавляемая текстовая область
+	int width = line_area->width;		// text area width
+	int height = line_area->height;		// text area height
+	int i = 0;
+	int j = 0;
+	int k = 0;
+	int l = 0;
+	int shift = (int)(height * 0.18);	// separator width
+	int mid_shift = shift >> 1;			// half of the shift
+	int word_be = 0, word_end = 0;		// word's being and end indexes
+	int word_width = 0;
+	int start_ind = 0;		// text start index
+	double mu = 0.0;		// average black pixels count
+	double thrshld = 0.0005;		// black pixels count threshold
+	uchar state = 0;		// current state 0 - for word  255 - for separator
+	uchar **pix = line_area->pix;	// textarea 2 dimensional array
+	ocr_text_area *words = NULL;	// result words area
+	ocr_text_area add_area;			// just added word area
 
 	words = NULL;
 	(*word_count) = 0;
-	/* Находим начало инжекс, с которого начинаются символы. */
-	for(i = 0; i < width; i++){
+
+	/* Find text start index */
+	for (i = 0; i < width; ++i) {
 		mu = 0.0;
-		for(j = 0; j < height; j++){
+		for (j = 0; j < height; ++j) {
 			mu += pix[j][i];
 		}
 		mu /= CR_BLACK * height;
-		if(mu > thrshld){
+		if (mu > thrshld) {
 			start_ind = i;
 			break;
 		}
 	}
-	word_be = start_ind;	// запоминаем индекс
-	for(i = start_ind; i < width - shift; i++){
-		/* Вычисляем долю черных пикселей в столбце пикселей. */
+	word_be = start_ind;	// remember index
+	for (i = start_ind; i < width - shift; ++i) {
+		/* Get average black pixels count */
 		mu = 0.0;
-		for(j = 0; j < height; j++){
-			for(k = 0; k < shift; k++){
+		for (j = 0; j < height; ++j) {
+			for (k = 0; k < shift; ++k) {
 				mu += pix[j][i + k];
 			}
 		}
 		mu /= CR_BLACK * height * shift;
-		if((mu < thrshld && state == 0) || i == width - shift - 1){	// если переходим в режим разделителя после символа
-			state = 255;		// меняем на режим разделителя
-			word_end = (i + mid_shift < width) ? i + mid_shift: width - 1;	// индекс конца символа
-			word_width = word_end - word_be;	// определяем ширину символа
-			/* Если ширина положительна, то создадим новый символ. */
-			if(word_width > 0){
+		if ((mu < thrshld && state == 0) || i == width - shift - 1) {	// separator state
+			state = 255;		// set corrsponded state
+			word_end = (i + mid_shift < width) ? i + mid_shift : width - 1;	// symbol end index
+			word_width = word_end - word_be;	// get word width
+			/* Create new symbol if word length is positive */
+			if (word_width > 0){
 				add_area.x = word_be;
 				add_area.y = line_area->y;
 				add_area.width = word_width;
 				add_area.height = height;
-				/* Копируем область символа из области слова.. */
+				/* Get symbol area from word area */
 				add_area.pix = (uchar **)malloc(sizeof(uchar *) * height);
-				for(k = 0; k < height; k++){
+				for (k = 0; k < height; ++k) {
 					add_area.pix[k] = (uchar *)malloc(sizeof(uchar) * word_width);
-					for(l = 0; l < word_width; l++){
+					for (l = 0; l < word_width; ++l) {
 						add_area.pix[k][l] = pix[k][l + word_be];
 					}
 				}
-				/* Добавление новой текстовой в массив области. */
+				/* Add new text area in array */
 				(*word_count)++;
 				words = (ocr_text_area *)realloc(words, sizeof(ocr_text_area) * (*word_count));
 				words[*word_count - 1] = add_area;
-				word_be = width - 1;	// сбрасываем индекс начала символа
+				word_be = width - 1;	// reset word start index
 			}
-		}else if(mu > thrshld && state == 255){
-			state = 0;			// меняем на режим символа
-			word_be = i - mid_shift;	// запоминаем индекс начала символа
+		} else if (mu > thrshld && state == 255) {
+			state = 0;			// set word state
+			word_be = i - mid_shift;	// remember word begin index
 		}
 	}
 	return words;
@@ -220,7 +223,7 @@ ocr_text_area *ocr_recog_stat_lines_area(ocr_text_area *text_area, int *line_cou
 	int h_new = 0;
 	int line_size = sizeof(uchar) * width;
 	double mu = 0.0;			// avarage bacl pixels count
-	double thrshld = 0.0005;	// threshodl value
+	double thrshld = 0.0005;	// threshold value
 	uchar state = 0;			// current state 0 - for text line, 255 - for separator.
 	uchar **pix = text_area->pix;	// text area array
 	uchar **tmp, **del;
